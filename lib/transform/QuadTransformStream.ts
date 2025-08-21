@@ -2,16 +2,19 @@ import type { TransformCallback } from 'node:stream';
 import { Transform } from 'node:stream';
 import type * as RDF from '@rdfjs/types';
 import type { IQuadTransformer } from './IQuadTransformer';
+import { ITransformCallback } from '../transformCallbacks/ITransformCallback';
 
 /**
  * A transform stream that runs quads through an array of transformers.
  */
 export class QuadTransformStream extends Transform {
   private readonly transformers: IQuadTransformer[];
+  private readonly transformCallback?: ITransformCallback[] | undefined;
 
-  public constructor(transformers: IQuadTransformer[]) {
+  public constructor(transformers: IQuadTransformer[], callback?: ITransformCallback[]) {
     super({ objectMode: true });
     this.transformers = transformers;
+    this.transformCallback = callback;
   }
 
   public runTransformers(quad: RDF.Quad): RDF.Quad[] {
@@ -24,6 +27,9 @@ export class QuadTransformStream extends Transform {
         }
       }
       quads = newQuads;
+    }
+    if (this.transformCallback) {
+      this.transformCallback.forEach((callback) => {callback.run(quad, quads)});
     }
     return quads;
   }
