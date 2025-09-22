@@ -5,7 +5,7 @@ import type { IQuadSource } from './io/IQuadSource';
 import type { IFragmentationStrategy } from './strategy/IFragmentationStrategy';
 import type { IQuadTransformer } from './transform/IQuadTransformer';
 import { QuadTransformStream } from './transform/QuadTransformStream';
-import { ITransformCallback } from './transformCallbacks/ITransformCallback';
+import type { ITransformCallback } from './transformCallbacks/ITransformCallback';
 
 /**
  * Fragments quads from a given source into a given sink.
@@ -44,19 +44,19 @@ export class Fragmenter {
    * Read quads from a given source, fragment it into the sink, and close the sink.
    */
   public async fragment(): Promise<void> {
-  if (this.transformCallBack) {
-    await Promise.all(this.transformCallBack.map(callback => callback.initializeCallback()));    
-  }
-  await this.fragmentationStrategy.fragment(
+    if (this.transformCallBack) {
+      await Promise.all(this.transformCallBack.map(callback => callback.initializeCallback()));
+    }
+    await this.fragmentationStrategy.fragment(
       Fragmenter.getTransformedQuadStream(
-        this.quadSource, 
-        this.transformers ?? [], 
-        this.transformCallBack
+        this.quadSource,
+        this.transformers ?? [],
+        this.transformCallBack,
       ),
       this.quadSink,
     );
-  await this.quadSink.close();
-  this.transformCallBack?.map(callback => callback.end());
+    await this.quadSink.close();
+    this.transformCallBack?.map(callback => callback.end());
   }
 }
 

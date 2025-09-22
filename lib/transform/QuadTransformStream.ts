@@ -1,8 +1,8 @@
 import type { TransformCallback } from 'node:stream';
 import { Transform } from 'node:stream';
 import type * as RDF from '@rdfjs/types';
+import type { ITransformCallback } from '../transformCallbacks/ITransformCallback';
 import type { IQuadTransformer } from './IQuadTransformer';
-import { ITransformCallback } from '../transformCallbacks/ITransformCallback';
 
 /**
  * A transform stream that runs quads through an array of transformers.
@@ -29,7 +29,10 @@ export class QuadTransformStream extends Transform {
       quads = newQuads;
     }
     if (this.transformCallback) {
-      this.transformCallback.forEach((callback) => {callback.run(quad, quads)});
+      for (const callback of this.transformCallback) {
+        // eslint-disable-next-line ts/no-floating-promises
+        callback.run(quad, quads);
+      }
     }
     return quads;
   }
