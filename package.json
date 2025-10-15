@@ -1,6 +1,6 @@
 {
   "name": "@rubeneschauzier/rdf-dataset-fragmenter",
-  "version": "2.9.0",
+  "version": "2.9.1",
   "packageManager": "yarn@1.22.22",
   "description": "Fragments an RDF dataset into multiple parts",
   "author": "Ruben Taelman <rubensworks@gmail.com>",
