@@ -1,7 +1,17 @@
+import * as fs from 'node:fs';
+import { dirname } from 'node:path';
 import { clearLine, cursorTo } from 'node:readline';
 import type { Writable } from 'node:stream';
 import type * as RDF from '@rdfjs/types';
+import { mkdirp } from 'mkdirp';
 import { DataFactory } from 'rdf-data-factory';
+import {
+  Generator,
+  Parser,
+  type SparqlParser,
+  type Triple,
+  type ConstructQuery,
+} from 'sparqljs';
 import type { IQuadSink } from './IQuadSink';
 import { ParallelFileWriter } from './ParallelFileWriter';
 
@@ -10,7 +20,8 @@ import { ParallelFileWriter } from './ParallelFileWriter';
  */
 export class QuadSinkSparqlFile implements IQuadSink {
   private readonly queryTemplate: string;
-  private readonly replacementIndicator: string;
+  private readonly parser: SparqlParser;
+  private readonly variableReplacementIndicator: string;
 
   private readonly outputFormat: string;
   private readonly iriToPath: Map<RegExp, string>;
@@ -21,9 +32,14 @@ export class QuadSinkSparqlFile implements IQuadSink {
   private counter = 0;
   private readonly dataFactory = new DataFactory();
 
+  // Buffer to collect quads per IRI before writing
+  private readonly quadBuffers = new Map<string, RDF.Quad[]>();
+
   public constructor(options: IQuadSinkSparqlFileOptions) {
-    this.queryTemplate = options.queryTemplate;
-    this.replacementIndicator = options.replacementIndicator;
+    this.queryTemplate = `CONSTRUCT { } WHERE { }`;
+    this.variableReplacementIndicator = options.variableReplacementIndicator;
+    this.parser = new Parser();
+
     this.outputFormat = options.outputFormat;
     this.iriToPath = new Map(Object.entries(options.iriToPath).map(([ exp, sub ]) => [
       new RegExp(exp, 'u'),
@@ -88,20 +104,71 @@ export class QuadSinkSparqlFile implements IQuadSink {
     return this.fileWriter.getWriteStream(path, this.outputFormat);
   }
 
-  protected fillQuery(quads: RDF.Quad[]): string{
+  /**
+   * Fills the empty query with patterns from the quad producer.
+   * @param patternQuads - Quads representing the shape (e.g. ?s foaf:name ?v1)
+   */
+  public buildQuery(patternQuads: RDF.Quad[]): string {
+    const queryAST: ConstructQuery = <ConstructQuery> this.parser.parse(this.queryTemplate);
 
+    // Convert quads to triples.
+    const triples: Triple[] = [];
+
+    const transformTerm = (term: RDF.Term): RDF.Term => {
+      if (
+        term.termType === 'NamedNode' &&
+        term.value.startsWith(this.variableReplacementIndicator)
+      ) {
+        // Extract name: "urn:var:myVariable" -> "myVariable"
+        const varName = term.value.slice(this.variableReplacementIndicator.length);
+        return this.dataFactory.variable(varName);
+      }
+      return term;
+    };
+
+    for (const q of patternQuads) {
+      triples.push({
+        subject: <RDF.Quad_Subject> transformTerm(q.subject),
+        predicate: <RDF.Quad_Predicate> transformTerm(q.predicate),
+        object: <RDF.Quad_Object> transformTerm(q.object),
+      });
+    }
+    queryAST.template = triples;
+    queryAST.where = [
+      {
+        type: 'bgp',
+        triples,
+      },
+    ];
+
+    return new Generator().stringify(queryAST);
   }
 
   public async push(iri: string, quad: RDF.Quad): Promise<void> {
     this.counter++;
     this.attemptLog();
 
-    const path = this.getFilePath(iri);
-    const os = await this.getFileStream(path);
-    os.write(quad);
+    // Buffer quads per IRI
+    if (!this.quadBuffers.has(iri)) {
+      this.quadBuffers.set(iri, []);
+    }
+    this.quadBuffers.get(iri)!.push(quad);
   }
 
   public async close(): Promise<void> {
+    // Write all buffered queries
+    for (const [ iri, quads ] of this.quadBuffers.entries()) {
+      const path = this.getFilePath(iri);
+      const query = this.buildQuery(quads);
+
+      const folder = dirname(path);
+      await mkdirp(folder);
+
+      // Add query to file. Each file should have its own query
+      await fs.promises.appendFile(path, `${query}`);
+    }
+
+    this.quadBuffers.clear();
     await this.fileWriter.close();
     this.attemptLog(true);
   }
@@ -111,12 +178,12 @@ export interface IQuadSinkSparqlFileOptions {
   /**
    * Query template to fill the quads into
    */
-  queryTemplate: string;
+  queryTemplate: ConstructQuery;
   /**
-   * String which indicates what should be replaced  in the query template
-   * by the quads passed to this sink
+   * String which indicates what should be replaced in the query template
+   * by the quads passed to this sink (eg urn:var:)
    */
-  replacementIndicator: string;
+  variableReplacementIndicator: string;
   /**
    * The RDF format to output, expressed as mimetype.
    */

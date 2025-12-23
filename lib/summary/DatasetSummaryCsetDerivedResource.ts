@@ -1,6 +1,5 @@
 import type * as RDF from '@rdfjs/types';
 import { DataFactory } from 'rdf-data-factory';
-import { VARIABLE_INDICATOR } from '../io/QuadSinkSparqlFile';
 import type { IDatasetSummaryArgs, IDatasetSummaryOutput } from './DatasetSummary';
 import { DatasetSummary } from './DatasetSummary';
 
@@ -8,6 +7,8 @@ export class DatasetSummaryCsetDerivedResource extends DatasetSummary {
   private readonly subjectMap: Map<string, Set<string>>;
   private readonly constructionStrategy: 'maxCardinality' | 'minSize';
   private readonly maxResources: number;
+  private readonly variableReplacementIndicator: string;
+
 
   // eslint-disable-next-line ts/naming-convention
   private readonly DF = new DataFactory();
@@ -17,6 +18,7 @@ export class DatasetSummaryCsetDerivedResource extends DatasetSummary {
     this.subjectMap = new Map();
     this.constructionStrategy = args.derivedResourceConstructionStrategy;
     this.maxResources = args.maxResources;
+    this.variableReplacementIndicator = args.variableReplacementIndicator;
   }
 
   public register(quad: RDF.Quad): void {
@@ -58,9 +60,16 @@ export class DatasetSummaryCsetDerivedResource extends DatasetSummary {
     }
     // Convert into quads that will form the BGP of the query
     const selectedQuads: RDF.Quad[][] = selected.map(
-      cset => [ ...cset.predicates ].map(
-        pred => this.DF.quad(VARIABLE_INDICATOR, this.DF.namedNode(pred), VARIABLE_INDICATOR),
-      ),
+      (cset) => {
+        let objCnt = 0;
+        return [ ...cset.predicates ].map(
+          pred => this.DF.quad(
+            this.DF.namedNode(`${this.variableReplacementIndicator}s0`),
+            this.DF.namedNode(pred),
+            this.DF.namedNode(`${this.variableReplacementIndicator}o${objCnt++}`),
+          ),
+        );
+      },
     );
     const grouped = selectedQuads.map(quads => quads.length);
     return { quads: selectedQuads.flat(1), iri: this.dataset, grouped };
@@ -95,4 +104,5 @@ export interface IDatasetSummarySparqlOutput extends IDatasetSummaryOutput {
 export interface IDatasetSummaryCsetDerivedResourceArgs extends IDatasetSummaryArgs {
   derivedResourceConstructionStrategy: 'minSize' | 'maxCardinality';
   maxResources: number;
+  variableReplacementIndicator: string;
 }
