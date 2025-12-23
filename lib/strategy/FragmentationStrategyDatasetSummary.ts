@@ -67,6 +67,18 @@ export abstract class FragmentationStrategyDatasetSummary<T extends IDatasetSumm
   }
 
   protected async flush(quadSink: IQuadSink): Promise<void> {
+    this.processBlankNodes();
+    for (const [ key, summary ] of this.summaries) {
+      const output = summary.serialize();
+      for (const quad of output.quads) {
+        await quadSink.push(output.iri, quad);
+      }
+      this.summaries.delete(key);
+    }
+    await super.flush(quadSink);
+  }
+
+  protected processBlankNodes(): void {
     const blankNodeQueue = [ ...this.blankNodeDatasets.keys() ];
     const processedBlankNodes = new Set<string>();
     while (blankNodeQueue.length > 0) {
@@ -94,14 +106,6 @@ export abstract class FragmentationStrategyDatasetSummary<T extends IDatasetSumm
     }
     this.blankNodeQuads.clear();
     this.blankNodeDatasets.clear();
-    for (const [ key, summary ] of this.summaries) {
-      const output = summary.serialize();
-      for (const quad of output.quads) {
-        await quadSink.push(output.iri, quad);
-      }
-      this.summaries.delete(key);
-    }
-    await super.flush(quadSink);
   }
 }
 
