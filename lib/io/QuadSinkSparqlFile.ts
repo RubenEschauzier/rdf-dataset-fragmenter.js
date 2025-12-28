@@ -203,5 +203,3 @@ export interface IQuadSinkSparqlFileOptions {
    */
   fileExtension?: string;
 }
-
-export const VARIABLE_INDICATOR: RDF.NamedNode = new DataFactory().namedNode('VARIABLE_SPARQL');
