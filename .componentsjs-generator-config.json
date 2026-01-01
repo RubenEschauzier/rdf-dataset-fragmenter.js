@@ -2,6 +2,7 @@
   "ignoreComponents": [
     "Map",
     "Set",
-    "RegExp"
+    "RegExp",
+    "ConstructQuery"
   ]
 }

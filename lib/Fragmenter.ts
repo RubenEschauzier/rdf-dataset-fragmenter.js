@@ -16,7 +16,6 @@ export class Fragmenter {
   private readonly quadSink: IQuadSink;
 
   public constructor(options: IFragmenterOptions) {
-    console.log("Made using local file (in Fragmenter.ts)");
     this.quadSource = options.quadSource;
     this.transformers = options.transformers;
     this.fragmentationStrategy = options.fragmentationStrategy;

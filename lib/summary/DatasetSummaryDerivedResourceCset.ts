@@ -1,13 +1,13 @@
 import type * as RDF from '@rdfjs/types';
 import { DataFactory } from 'rdf-data-factory';
 import type { IQuadMatcher } from '../quadmatcher/IQuadMatcher';
-import type { IDatasetSummaryArgs, IDatasetSummaryOutput } from './DatasetSummary';
-import { DatasetSummary } from './DatasetSummary';
+import type { IDatasetSummaryArgs } from './DatasetSummary';
+import { DatasetSummaryDerivedResource, type IDatasetSummarySparqlOutput } from './DatasetSummaryDerivedResource';
 
-export class DatasetSummaryCsetDerivedResource extends DatasetSummary {
+export class DatasetSummaryDerivedResourceCset extends DatasetSummaryDerivedResource {
   private readonly subjectMap: Map<string, Set<string>>;
   private readonly filter: IQuadMatcher | undefined;
-  private readonly constructionStrategy: 'maxCardinality' | 'minSize';
+  private readonly constructionStrategy: 'maxCardinality' | 'minSize' | 'maxCardinalityDeconstruct';
   private readonly authoritativenessStrategy: 'baseUri' | undefined;
   private readonly maxResources: number;
   private readonly variableReplacementIndicator: string;
@@ -15,7 +15,7 @@ export class DatasetSummaryCsetDerivedResource extends DatasetSummary {
   // eslint-disable-next-line ts/naming-convention
   private readonly DF = new DataFactory();
 
-  public constructor(args: IDatasetSummaryCsetDerivedResourceArgs) {
+  public constructor(args: IDatasetSummaryDerivedResourceCsetArgs) {
     super(args);
     this.subjectMap = new Map();
 
@@ -108,19 +108,11 @@ export interface ICharacteristicSet {
   count: number;
 }
 
-export interface IDatasetSummarySparqlOutput extends IDatasetSummaryOutput {
-  /**
-   * Indexes indicating which quads belong together, as frag strategies expect
-   * flat arrays of quads
-   */
-  grouped: number[];
-}
-
-export interface IDatasetSummaryCsetDerivedResourceArgs extends IDatasetSummaryArgs {
+export interface IDatasetSummaryDerivedResourceCsetArgs extends IDatasetSummaryArgs {
   /**
    * How the derived resource triple patterns should be selected from the candidate csets
    */
-  derivedResourceConstructionStrategy: 'minSize' | 'maxCardinality';
+  derivedResourceConstructionStrategy: 'minSize' | 'maxCardinality' | 'maxCardinalityDeconstruct';
   /**
    * Maximal number of derived resources that should be added to a pod
    */
