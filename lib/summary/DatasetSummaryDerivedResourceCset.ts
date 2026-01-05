@@ -7,7 +7,7 @@ import { DatasetSummaryDerivedResource, type IDatasetSummarySparqlOutput } from 
 export class DatasetSummaryDerivedResourceCset extends DatasetSummaryDerivedResource {
   private readonly subjectMap: Map<string, Set<string>>;
   private readonly filter: IQuadMatcher | undefined;
-  private readonly constructionStrategy: 'maxCardinality' | 'minSize' | 'maxCardinalityDeconstruct';
+  private readonly constructionStrategy: | 'minSize' | 'maxSize' | 'maxCardinality';
   private readonly authoritativenessStrategy: 'baseUri' | undefined;
   private readonly maxResources: number;
   private readonly variableReplacementIndicator: string;
@@ -66,6 +66,8 @@ export class DatasetSummaryDerivedResourceCset extends DatasetSummaryDerivedReso
       selected = this.selectorMaxCardinality(cSets);
     } else if (this.constructionStrategy === 'minSize') {
       selected = this.selectorMinSize(cSets);
+    } else if (this.constructionStrategy === 'maxSize') {
+      selected = this.selectorMaxSize(cSets);
     } else {
       throw new Error(`Passed unsupported derived resource construction strategy in ${this.constructor.name}`);
     }
@@ -98,6 +100,13 @@ export class DatasetSummaryDerivedResourceCset extends DatasetSummaryDerivedReso
     return this.filterMinSizeCset(sorted).slice(0, this.maxResources);
   }
 
+  private selectorMaxSize(cSets: Map<string, ICharacteristicSet>): ICharacteristicSet[] {
+    const sorted: ICharacteristicSet[] =
+      [ ...cSets.values() ].sort((a, b) => b.predicates.size - a.predicates.size);
+    return this.filterMinSizeCset(sorted).slice(0, this.maxResources);
+  }
+
+
   private filterMinSizeCset(cSets: ICharacteristicSet[]): ICharacteristicSet[] {
     return cSets.filter(cSet => cSet.predicates.size > 1);
   }
@@ -112,7 +121,7 @@ export interface IDatasetSummaryDerivedResourceCsetArgs extends IDatasetSummaryA
   /**
    * How the derived resource triple patterns should be selected from the candidate csets
    */
-  derivedResourceConstructionStrategy: 'minSize' | 'maxCardinality' | 'maxCardinalityDeconstruct';
+  derivedResourceConstructionStrategy: 'minSize' | 'maxSize' | 'maxCardinality';
   /**
    * Maximal number of derived resources that should be added to a pod
    */

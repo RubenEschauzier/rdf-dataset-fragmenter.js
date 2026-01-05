@@ -2,7 +2,7 @@ import type * as RDF from '@rdfjs/types';
 import type { IQuadSink } from '../io/IQuadSink';
 import type { IMetadataGenerator } from '../metadata/IMetadataGenerator';
 import { DF } from '../summary/DatasetSummary';
-import type { IDatasetSummaryDerivedResource } from '../summary/DatasetSummaryDerivedResource';
+import type { IDatasetSummaryDerivedResource, IDatasetSummarySparqlOutput } from '../summary/DatasetSummaryDerivedResource';
 import { FragmentationStrategyDatasetSummary } from './FragmentationStrategyDatasetSummary';
 import type { IFragmentationStrategyDatasetSummaryOptions } from './FragmentationStrategyDatasetSummary';
 
@@ -37,6 +37,7 @@ export abstract class FragmentationStrategyDatasetSummaryDerivedResource<
       this.podBaseUriExtractionRegex = new RegExp(options.podBaseUriExtractionRegex, 'u');
     }
   }
+
 
   protected override subjectToDatasets(subject: string): Set<string> {
     for (const exclusion of this.exclusionPatterns) {
@@ -73,6 +74,58 @@ export abstract class FragmentationStrategyDatasetSummaryDerivedResource<
     }
   }
 
+  /**
+   * Writes the quads required to register the generated derived resource in the pod
+   * @param output The serialization output of the derived resource
+   * @param quadSink Quad sink to write to
+   * @param metaFile The iri of the .meta file of the given derived resource
+   */
+  protected async writeMetaFile(
+    output: IDatasetSummarySparqlOutput,
+    quadSink: IQuadSink,
+    metaFile: string
+  ){
+    const metadataQuads = this.metadataQuadsGenerator.generateMetadata({
+      podUri: output.iri,
+      selectorPattern: `${output.iri}*`,
+      filterFilenameTemplate: this.filterFilename,
+      nResources: output.grouped.length,
+    });
+
+    for (const quad of metadataQuads) {
+      await quadSink.push(metaFile, quad);
+    }
+  }
+
+  /**
+   * Write a predicate in the pod's WebId file that points directly to
+   * where the derived resources of that pod are defined.
+   * @param output The serialization output of the derived resource
+   * @param quadSink Quad sink to write to
+   * @param metaFile The iri of the .meta file of the given derived resource
+   */
+  protected async writeDirectMetadataLink(
+    output: IDatasetSummarySparqlOutput,
+    quadSink: IQuadSink,
+    metaFile: string
+  ){
+    const podMatches = this.podBaseUriExtractionRegex!.exec(output.iri);
+    if (podMatches) {
+      for (const match of podMatches) {
+        const summaryWebId = this.podTowebIds[match];
+        if (!summaryWebId) {
+          throw new Error(`Found summary for pod without registered WebId: ${match}`);
+        }
+        const metaQuad = DF.quad(
+          DF.namedNode(summaryWebId),
+          DF.namedNode(this.directMetadataLinkPredicate!),
+          DF.namedNode(metaFile),
+        );
+        await quadSink.push(summaryWebId, metaQuad);
+      }
+    }
+  }
+
   protected override async flush(quadSink: IQuadSink): Promise<void> {
     this.processBlankNodes();
     for (const [ key, summary ] of this.summaries) {
@@ -89,34 +142,11 @@ export abstract class FragmentationStrategyDatasetSummaryDerivedResource<
         startIdx += groupSize;
         iriIdx++;
       }
-      // Generate and write metadata quads
-      const metadataQuads = this.metadataQuadsGenerator.generateMetadata({
-        podUri: output.iri,
-        selectorPattern: `${output.iri}*`,
-        filterFilenameTemplate: this.filterFilename,
-        nResources: output.grouped.length,
-      });
-
       const metaFile = `${output.iri}${this.metadataQuadsGenerator.getMetaFileName()}`;
-      for (const quad of metadataQuads) {
-        await quadSink.push(metaFile, quad);
-      }
+      this.writeMetaFile(output, quadSink, metaFile);
+
       if (this.directMetadataLinkPredicate) {
-        const podMatches = this.podBaseUriExtractionRegex!.exec(output.iri);
-        if (podMatches) {
-          for (const match of podMatches) {
-            const summaryWebId = this.podTowebIds[match];
-            if (!summaryWebId) {
-              throw new Error(`Found summary for pod without registered WebId: ${match}`);
-            }
-            const metaQuad = DF.quad(
-              DF.namedNode(summaryWebId),
-              DF.namedNode(this.directMetadataLinkPredicate),
-              DF.namedNode(metaFile),
-            );
-            await quadSink.push(summaryWebId, metaQuad);
-          }
-        }
+        this.writeDirectMetadataLink(output, quadSink, metaFile);
       }
       this.summaries.delete(key);
     }

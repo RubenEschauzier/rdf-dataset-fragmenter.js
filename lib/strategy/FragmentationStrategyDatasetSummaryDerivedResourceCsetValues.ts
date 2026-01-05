@@ -1,12 +1,13 @@
+import { IQuadSink } from '../io/IQuadSink';
 import type { IQuadMatcher } from '../quadmatcher/IQuadMatcher';
 import { DatasetSummaryDerivedResourceCset } from '../summary/DatasetSummaryDerivedResourceCset';
-import {
-  FragmentationStrategyDatasetSummaryDerivedResource,
-  type IFragmentationStrategyDatasetSummaryDerivedResourceOptions,
-} from './FragmentationStrategyDatasetSummaryDerivedResource';
+import { 
+  FragmentationStrategyDatasetSummaryDerivedResourceFileWriter, 
+  IFragmentationStrategyDatasetSummaryDerivedResourceFileWriterOptions
+} from './FragmentationStrategyDatasetSummaryDerivedResourceFileWriter';
 
-export class FragmentationStrategyDatasetSummaryDerivedResourceCset
-  extends FragmentationStrategyDatasetSummaryDerivedResource<DatasetSummaryDerivedResourceCset> {
+export class FragmentationStrategyDatasetSummaryDerivedResourceCsetValues
+  extends FragmentationStrategyDatasetSummaryDerivedResourceFileWriter<DatasetSummaryDerivedResourceCset> {
   protected readonly filter: IQuadMatcher | undefined;
   protected readonly selector: string = '*';
 
@@ -16,8 +17,9 @@ export class FragmentationStrategyDatasetSummaryDerivedResourceCset
   protected readonly maxResources: number;
 
   protected readonly variableReplacementIndicator: string;
+  
 
-  public constructor(options: IFragmentationStrategyDatasetSummaryDerivedResourceCsetOptions) {
+  public constructor(options: IFragmentationStrategyDatasetSummaryDerivedResourceCsetValuesOptions) {
     super(options);
     this.filter = options.filter;
 
@@ -40,10 +42,52 @@ export class FragmentationStrategyDatasetSummaryDerivedResourceCset
       },
     );
   }
+  
+  /**
+   * Overwritten flush method to write more complicated derived resource filters directly
+   * to file without requiring it to follow the quad format. In this case we use the VALUES clause
+   * @param quadSink 
+   */
+  protected override async flush(quadSink: IQuadSink): Promise<void> {
+    this.processBlankNodes();
+    for (const [ key, summary ] of this.summaries) {
+      const output = summary.serialize();
+
+      let startIdx = 0;
+      let iriIdx = 0;
+      for (const groupSize of output.grouped) {
+        const quadsSingleResource = output.quads.slice(startIdx, startIdx + groupSize);
+        const predicates = quadsSingleResource.map(quad => `<${quad.predicate.value}>`);
+        const constructQuery = `
+        CONSTRUCT { ?s ?p ?o }
+        WHERE {
+          ?s ?p ?o .
+          VALUES ?p { ${predicates.join(" ")} }
+        }`;
+
+        const filePathPod = this.getFilePath(output.iri);
+        const path = `${filePathPod}${this.filterFilename.replace(':COUNT:', '0')}.rq`;
+        await this.writeDirAndFile(path, constructQuery, 'utf-8')
+
+        startIdx += groupSize;
+        iriIdx++;
+      }
+      const metaFile = `${output.iri}${this.metadataQuadsGenerator.getMetaFileName()}`;
+      this.writeMetaFile(output, quadSink, metaFile);
+
+      if (this.directMetadataLinkPredicate) {
+        this.writeDirectMetadataLink(output, quadSink, metaFile);
+      }
+
+      this.summaries.delete(key);
+    }
+    await super.flush(quadSink);
+    
+  }
 }
 
-export interface IFragmentationStrategyDatasetSummaryDerivedResourceCsetOptions
-  extends IFragmentationStrategyDatasetSummaryDerivedResourceOptions {
+export interface IFragmentationStrategyDatasetSummaryDerivedResourceCsetValuesOptions
+  extends IFragmentationStrategyDatasetSummaryDerivedResourceFileWriterOptions {
   /**
    * How the derived resource triple patterns should be selected from the candidate csets
    */

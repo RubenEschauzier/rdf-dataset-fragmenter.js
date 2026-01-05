@@ -14,6 +14,6 @@ export class DatasetSummaryDerivedResourceQpf extends DatasetSummaryDerivedResou
   public register(quad: RDF.Quad): void {};
 
   public serialize(): IDatasetSummarySparqlOutput {
-    return { quads: [], iri: this.dataset, grouped: []};
+    return { quads: [], iri: this.dataset, grouped: [0]};
   }
 }
