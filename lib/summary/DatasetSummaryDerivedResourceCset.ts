@@ -106,7 +106,6 @@ export class DatasetSummaryDerivedResourceCset extends DatasetSummaryDerivedReso
     return this.filterMinSizeCset(sorted).slice(0, this.maxResources);
   }
 
-
   private filterMinSizeCset(cSets: ICharacteristicSet[]): ICharacteristicSet[] {
     return cSets.filter(cSet => cSet.predicates.size > 1);
   }

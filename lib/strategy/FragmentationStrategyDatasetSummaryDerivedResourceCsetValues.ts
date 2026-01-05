@@ -1,9 +1,11 @@
-import { IQuadSink } from '../io/IQuadSink';
+import type { IQuadSink } from '../io/IQuadSink';
 import type { IQuadMatcher } from '../quadmatcher/IQuadMatcher';
 import { DatasetSummaryDerivedResourceCset } from '../summary/DatasetSummaryDerivedResourceCset';
-import { 
-  FragmentationStrategyDatasetSummaryDerivedResourceFileWriter, 
-  IFragmentationStrategyDatasetSummaryDerivedResourceFileWriterOptions
+import type {
+  IFragmentationStrategyDatasetSummaryDerivedResourceFileWriterOptions,
+} from './FragmentationStrategyDatasetSummaryDerivedResourceFileWriter';
+import {
+  FragmentationStrategyDatasetSummaryDerivedResourceFileWriter,
 } from './FragmentationStrategyDatasetSummaryDerivedResourceFileWriter';
 
 export class FragmentationStrategyDatasetSummaryDerivedResourceCsetValues
@@ -17,7 +19,6 @@ export class FragmentationStrategyDatasetSummaryDerivedResourceCsetValues
   protected readonly maxResources: number;
 
   protected readonly variableReplacementIndicator: string;
-  
 
   public constructor(options: IFragmentationStrategyDatasetSummaryDerivedResourceCsetValuesOptions) {
     super(options);
@@ -42,11 +43,11 @@ export class FragmentationStrategyDatasetSummaryDerivedResourceCsetValues
       },
     );
   }
-  
+
   /**
    * Overwritten flush method to write more complicated derived resource filters directly
    * to file without requiring it to follow the quad format. In this case we use the VALUES clause
-   * @param quadSink 
+   * @param quadSink
    */
   protected override async flush(quadSink: IQuadSink): Promise<void> {
     this.processBlankNodes();
@@ -62,12 +63,12 @@ export class FragmentationStrategyDatasetSummaryDerivedResourceCsetValues
         CONSTRUCT { ?s ?p ?o }
         WHERE {
           ?s ?p ?o .
-          VALUES ?p { ${predicates.join(" ")} }
+          VALUES ?p { ${predicates.join(' ')} }
         }`;
 
         const filePathPod = this.getFilePath(output.iri);
         const path = `${filePathPod}${this.filterFilename.replace(':COUNT:', '0')}.rq`;
-        await this.writeDirAndFile(path, constructQuery, 'utf-8')
+        await this.writeDirAndFile(path, constructQuery, 'utf-8');
 
         startIdx += groupSize;
         iriIdx++;
@@ -82,7 +83,6 @@ export class FragmentationStrategyDatasetSummaryDerivedResourceCsetValues
       this.summaries.delete(key);
     }
     await super.flush(quadSink);
-    
   }
 }
 

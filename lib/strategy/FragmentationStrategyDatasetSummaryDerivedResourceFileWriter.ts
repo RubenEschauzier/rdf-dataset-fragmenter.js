@@ -3,9 +3,11 @@ import { dirname } from 'node:path';
 import { mkdirp } from 'mkdirp';
 
 import type { IDatasetSummaryDerivedResource } from '../summary/DatasetSummaryDerivedResource';
-import { 
-  FragmentationStrategyDatasetSummaryDerivedResource, 
-  IFragmentationStrategyDatasetSummaryDerivedResourceOptions 
+import type {
+  IFragmentationStrategyDatasetSummaryDerivedResourceOptions,
+} from './FragmentationStrategyDatasetSummaryDerivedResource';
+import {
+  FragmentationStrategyDatasetSummaryDerivedResource,
 } from './FragmentationStrategyDatasetSummaryDerivedResource';
 
 export abstract class FragmentationStrategyDatasetSummaryDerivedResourceFileWriter<
@@ -53,7 +55,7 @@ export abstract class FragmentationStrategyDatasetSummaryDerivedResourceFileWrit
     return path;
   }
 
-  protected async writeDirAndFile(path: string, data: string, encoding: BufferEncoding){
+  protected async writeDirAndFile(path: string, data: string, encoding: BufferEncoding) {
     await mkdirp(dirname(path));
     await writeFile(path, data, encoding);
   }

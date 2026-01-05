@@ -1,13 +1,14 @@
 import type { IQuadSink } from '../io/IQuadSink';
 import { DatasetSummaryDerivedResourceQpf } from '../summary/DatasetSummaryDerivedResourceQpf';
-import { 
+import type {
+  IFragmentationStrategyDatasetSummaryDerivedResourceFileWriterOptions,
+} from './FragmentationStrategyDatasetSummaryDerivedResourceFileWriter';
+import {
   FragmentationStrategyDatasetSummaryDerivedResourceFileWriter,
-  IFragmentationStrategyDatasetSummaryDerivedResourceFileWriterOptions
 } from './FragmentationStrategyDatasetSummaryDerivedResourceFileWriter';
 
 export class FragmentationStrategyDatasetSummaryDerivedResourceQpf
   extends FragmentationStrategyDatasetSummaryDerivedResourceFileWriter<DatasetSummaryDerivedResourceQpf> {
-
   public constructor(options: IFragmentationStrategyDatasetSummaryDerivedResourceFileWriterOptions) {
     super(options);
   }
@@ -31,7 +32,7 @@ export class FragmentationStrategyDatasetSummaryDerivedResourceQpf
       const output = summary.serialize();
       const filePathPod = this.getFilePath(output.iri);
       const path = `${filePathPod}${this.filterFilename.replace(':COUNT:', '0')}.txt`;
-      await this.writeDirAndFile(path, 'qpf', 'utf-8')
+      await this.writeDirAndFile(path, 'qpf', 'utf-8');
 
       const metaFile = `${output.iri}${this.metadataQuadsGenerator.getMetaFileName()}`;
       this.writeMetaFile(output, quadSink, metaFile);

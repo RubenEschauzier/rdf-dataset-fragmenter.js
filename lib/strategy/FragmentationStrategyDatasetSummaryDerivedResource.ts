@@ -38,7 +38,6 @@ export abstract class FragmentationStrategyDatasetSummaryDerivedResource<
     }
   }
 
-
   protected override subjectToDatasets(subject: string): Set<string> {
     for (const exclusion of this.exclusionPatterns) {
       if (exclusion.test(subject)) {
@@ -83,8 +82,8 @@ export abstract class FragmentationStrategyDatasetSummaryDerivedResource<
   protected async writeMetaFile(
     output: IDatasetSummarySparqlOutput,
     quadSink: IQuadSink,
-    metaFile: string
-  ){
+    metaFile: string,
+  ) {
     const metadataQuads = this.metadataQuadsGenerator.generateMetadata({
       podUri: output.iri,
       selectorPattern: `${output.iri}*`,
@@ -107,8 +106,8 @@ export abstract class FragmentationStrategyDatasetSummaryDerivedResource<
   protected async writeDirectMetadataLink(
     output: IDatasetSummarySparqlOutput,
     quadSink: IQuadSink,
-    metaFile: string
-  ){
+    metaFile: string,
+  ) {
     const podMatches = this.podBaseUriExtractionRegex!.exec(output.iri);
     if (podMatches) {
       for (const match of podMatches) {
