@@ -182,10 +182,8 @@ export interface IFragmentationStrategyDatasetSummaryDerivedResourceOptions
    */
   /**
    * Metadata file construction method
-   * TODO: Change cset to enumerate all predicates of an entity of that cset, not join them. Also consider
-   * hierarchical nature of csets
-   * This acts as a sort of index instead. The engine if it has a subset of those triples can just download
-   * this subset quickly filter out non-matching predicates and use this to make the joins.
+   * TODO: The .meta file generation still goes wrong (missing files)
+   * TODO: Why do I need to adjust the max number of files open at same time?
    * TODO: Add void descriptions showing what predicates are answered in a derived resource (Later)
    */
   metadataQuadsGenerator: IMetadataGenerator;

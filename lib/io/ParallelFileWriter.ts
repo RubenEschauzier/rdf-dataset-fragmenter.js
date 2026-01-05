@@ -27,7 +27,7 @@ export class ParallelFileWriter {
       dispose: (value, key) => this.closeWriteEntry(key, value),
       noDisposeOnSet: true,
     });
-    this.lock = new AsyncLock();
+    this.lock = new AsyncLock({ maxPending: Infinity });
     this.fileClosingPromises = [];
   }
 

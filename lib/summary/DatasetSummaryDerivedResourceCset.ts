@@ -61,6 +61,7 @@ export class DatasetSummaryDerivedResourceCset extends DatasetSummaryDerivedReso
 
       cSets.get(signature)!.count++;
     }
+
     let selected: ICharacteristicSet[];
     if (this.constructionStrategy === 'maxCardinality') {
       selected = this.selectorMaxCardinality(cSets);

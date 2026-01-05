@@ -65,9 +65,8 @@ export class FragmentationStrategyDatasetSummaryDerivedResourceCsetValues
           ?s ?p ?o .
           VALUES ?p { ${predicates.join(' ')} }
         }`;
-
         const filePathPod = this.getFilePath(output.iri);
-        const path = `${filePathPod}${this.filterFilename.replace(':COUNT:', '0')}.rq`;
+        const path = `${filePathPod}${this.filterFilename.replace(':COUNT:', `${iriIdx}`)}.rq`;
         await this.writeDirAndFile(path, constructQuery, 'utf-8');
 
         startIdx += groupSize;
