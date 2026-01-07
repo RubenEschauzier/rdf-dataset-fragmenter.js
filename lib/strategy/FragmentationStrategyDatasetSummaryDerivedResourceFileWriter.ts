@@ -55,7 +55,7 @@ export abstract class FragmentationStrategyDatasetSummaryDerivedResourceFileWrit
     return path;
   }
 
-  protected async writeDirAndFile(path: string, data: string, encoding: BufferEncoding) {
+  protected async writeDirAndFile(path: string, data: string, encoding: BufferEncoding): Promise<void> {
     await mkdirp(dirname(path));
     await writeFile(path, data, encoding);
   }

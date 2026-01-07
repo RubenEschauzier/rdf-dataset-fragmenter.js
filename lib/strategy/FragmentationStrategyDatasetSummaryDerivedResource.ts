@@ -2,7 +2,10 @@ import type * as RDF from '@rdfjs/types';
 import type { IQuadSink } from '../io/IQuadSink';
 import type { IMetadataGenerator } from '../metadata/IMetadataGenerator';
 import { DF } from '../summary/DatasetSummary';
-import type { IDatasetSummaryDerivedResource, IDatasetSummarySparqlOutput } from '../summary/DatasetSummaryDerivedResource';
+import type {
+  IDatasetSummaryDerivedResource,
+  IDatasetSummarySparqlOutput,
+} from '../summary/DatasetSummaryDerivedResource';
 import { FragmentationStrategyDatasetSummary } from './FragmentationStrategyDatasetSummary';
 import type { IFragmentationStrategyDatasetSummaryOptions } from './FragmentationStrategyDatasetSummary';
 
@@ -80,15 +83,16 @@ export abstract class FragmentationStrategyDatasetSummaryDerivedResource<
    * @param metaFile The iri of the .meta file of the given derived resource
    */
   protected async writeMetaFile(
-    output: IDatasetSummarySparqlOutput,
+    iri: string,
+    nResources: number,
     quadSink: IQuadSink,
     metaFile: string,
-  ) {
+  ): Promise<void> {
     const metadataQuads = this.metadataQuadsGenerator.generateMetadata({
-      podUri: output.iri,
-      selectorPattern: `${output.iri}*`,
+      podUri: iri,
+      selectorPattern: `${iri}*`,
       filterFilenameTemplate: this.filterFilename,
-      nResources: output.grouped.length,
+      nResources: nResources,
     });
 
     for (const quad of metadataQuads) {
@@ -107,7 +111,7 @@ export abstract class FragmentationStrategyDatasetSummaryDerivedResource<
     output: IDatasetSummarySparqlOutput,
     quadSink: IQuadSink,
     metaFile: string,
-  ) {
+  ): Promise<void> {
     const podMatches = this.podBaseUriExtractionRegex!.exec(output.iri);
     if (podMatches) {
       for (const match of podMatches) {
@@ -142,10 +146,10 @@ export abstract class FragmentationStrategyDatasetSummaryDerivedResource<
         iriIdx++;
       }
       const metaFile = `${output.iri}${this.metadataQuadsGenerator.getMetaFileName()}`;
-      this.writeMetaFile(output, quadSink, metaFile);
+      await this.writeMetaFile(output.iri, output.grouped.length, quadSink, metaFile);
 
       if (this.directMetadataLinkPredicate) {
-        this.writeDirectMetadataLink(output, quadSink, metaFile);
+        await this.writeDirectMetadataLink(output, quadSink, metaFile);
       }
       this.summaries.delete(key);
     }
@@ -161,7 +165,8 @@ export abstract class FragmentationStrategyDatasetSummaryDerivedResource<
 
     if (defined.length > 0 && undefinedOnes.length > 0) {
       throw new Error(
-        `${context} error: either all of [${Object.keys(values).join(', ')}] must be defined or all must be undefined. ` +
+        `${context} error: either all of [${Object.keys(values).join(', ')}] ` +
+        `must be defined or all must be undefined. ` +
         `Defined: ${defined.map(([ k ]) => k).join(', ')}; ` +
         `Missing: ${undefinedOnes.map(([ k ]) => k).join(', ')}.`,
       );
@@ -182,8 +187,9 @@ export interface IFragmentationStrategyDatasetSummaryDerivedResourceOptions
    */
   /**
    * Metadata file construction method
-   * TODO: The .meta file generation still goes wrong (missing files)
-   * TODO: Why do I need to adjust the max number of files open at same time?
+   * TODO: Add a derived resource that is purely a queries of increasing size
+   * TODO: Determine if our approach can also produce .meta files for specific resources and if 
+   * we do so correctly
    * TODO: Add void descriptions showing what predicates are answered in a derived resource (Later)
    */
   metadataQuadsGenerator: IMetadataGenerator;

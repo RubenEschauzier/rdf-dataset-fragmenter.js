@@ -59,12 +59,12 @@ export class FragmentationStrategyDatasetSummaryDerivedResourceCsetValues
       for (const groupSize of output.grouped) {
         const quadsSingleResource = output.quads.slice(startIdx, startIdx + groupSize);
         const predicates = quadsSingleResource.map(quad => `<${quad.predicate.value}>`);
-        const constructQuery = `
-        CONSTRUCT { ?s ?p ?o }
-        WHERE {
-          ?s ?p ?o .
-          VALUES ?p { ${predicates.join(' ')} }
-        }`;
+        const constructQuery = 
+`CONSTRUCT { ?s ?p ?o }
+WHERE {
+  ?s ?p ?o .
+  VALUES ?p { ${predicates.join(' ')} }
+}`;
         const filePathPod = this.getFilePath(output.iri);
         const path = `${filePathPod}${this.filterFilename.replace(':COUNT:', `${iriIdx}`)}.rq`;
         await this.writeDirAndFile(path, constructQuery, 'utf-8');
@@ -73,10 +73,10 @@ export class FragmentationStrategyDatasetSummaryDerivedResourceCsetValues
         iriIdx++;
       }
       const metaFile = `${output.iri}${this.metadataQuadsGenerator.getMetaFileName()}`;
-      this.writeMetaFile(output, quadSink, metaFile);
+      await this.writeMetaFile(output.iri, output.grouped.length, quadSink, metaFile);
 
       if (this.directMetadataLinkPredicate) {
-        this.writeDirectMetadataLink(output, quadSink, metaFile);
+        await this.writeDirectMetadataLink(output, quadSink, metaFile);
       }
 
       this.summaries.delete(key);

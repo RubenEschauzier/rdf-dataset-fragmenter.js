@@ -5,7 +5,7 @@ import { DatasetSummaryDerivedResource, type IDatasetSummarySparqlOutput } from 
 /**
  * Stub dataset summary class that does no actual summary creation.
  */
-export class DatasetSummaryDerivedResourceQpf extends DatasetSummaryDerivedResource {
+export class DatasetSummaryDerivedResourceStub extends DatasetSummaryDerivedResource {
   public constructor(args: IDatasetSummaryArgs) {
     super(args);
   }

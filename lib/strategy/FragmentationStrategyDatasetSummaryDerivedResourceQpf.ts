@@ -1,5 +1,5 @@
 import type { IQuadSink } from '../io/IQuadSink';
-import { DatasetSummaryDerivedResourceQpf } from '../summary/DatasetSummaryDerivedResourceQpf';
+import { DatasetSummaryDerivedResourceStub } from '../summary/DatasetSummaryDerivedResourceStub';
 import type {
   IFragmentationStrategyDatasetSummaryDerivedResourceFileWriterOptions,
 } from './FragmentationStrategyDatasetSummaryDerivedResourceFileWriter';
@@ -8,13 +8,13 @@ import {
 } from './FragmentationStrategyDatasetSummaryDerivedResourceFileWriter';
 
 export class FragmentationStrategyDatasetSummaryDerivedResourceQpf
-  extends FragmentationStrategyDatasetSummaryDerivedResourceFileWriter<DatasetSummaryDerivedResourceQpf> {
+  extends FragmentationStrategyDatasetSummaryDerivedResourceFileWriter<DatasetSummaryDerivedResourceStub> {
   public constructor(options: IFragmentationStrategyDatasetSummaryDerivedResourceFileWriterOptions) {
     super(options);
   }
 
-  protected createSummary(dataset: string): DatasetSummaryDerivedResourceQpf {
-    return new DatasetSummaryDerivedResourceQpf(
+  protected createSummary(dataset: string): DatasetSummaryDerivedResourceStub {
+    return new DatasetSummaryDerivedResourceStub(
       {
         dataset,
       },
@@ -35,24 +35,12 @@ export class FragmentationStrategyDatasetSummaryDerivedResourceQpf
       await this.writeDirAndFile(path, 'qpf', 'utf-8');
 
       const metaFile = `${output.iri}${this.metadataQuadsGenerator.getMetaFileName()}`;
-      this.writeMetaFile(output, quadSink, metaFile);
+      await this.writeMetaFile(output.iri, 1, quadSink, metaFile);
 
       if (this.directMetadataLinkPredicate) {
-        this.writeDirectMetadataLink(output, quadSink, metaFile);
+        await this.writeDirectMetadataLink(output, quadSink, metaFile);
       }
 
-      // // Generate and write metadata quads that point towards the qpf resource
-      // const metadataQuads = this.metadataQuadsGenerator.generateMetadata({
-      //   podUri: iri,
-      //   selectorPattern: `${iri}*`,
-      //   filterFilenameTemplate: this.filterFilename,
-      //   nResources: 1,
-      // });
-
-      // const metaFile = `${iri}${this.metadataQuadsGenerator.getMetaFileName()}`;
-      // for (const quad of metadataQuads) {
-      //   await quadSink.push(metaFile, quad);
-      // }
       this.summaries.delete(key);
     }
   }
