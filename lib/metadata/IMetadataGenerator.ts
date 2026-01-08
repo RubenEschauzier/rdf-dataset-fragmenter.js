@@ -25,7 +25,7 @@ export interface IMetadataGenerationInput {
    * Relative selector path. For example '*' simply selects all
    * data in a pod for the given derived resource.
    */
-  selectorPattern: string;
+  selectorPatterns: string[];
   /**
    * Template for filter filename
    */

@@ -63,12 +63,14 @@ export class TemplateDerivedResourceMetadataGenerator implements IMetadataGenera
         this.DF.namedNode(`${this.derivedNamespace}template`),
         this.DF.literal(templateString),
       ));
-
-      quads.push(this.DF.quad(
-        descriptorNode,
-        this.DF.namedNode(`${this.derivedNamespace}selector`),
-        this.DF.namedNode(input.selectorPattern),
-      ));
+      
+      for (const selectorPattern of input.selectorPatterns){
+        quads.push(this.DF.quad(
+          descriptorNode,
+          this.DF.namedNode(`${this.derivedNamespace}selector`),
+          this.DF.namedNode(selectorPattern),
+        ));
+      }
 
       const filter = `${input.podUri}${input.filterFilenameTemplate.replace(':COUNT:', `${i}`)}`;
       quads.push(this.DF.quad(

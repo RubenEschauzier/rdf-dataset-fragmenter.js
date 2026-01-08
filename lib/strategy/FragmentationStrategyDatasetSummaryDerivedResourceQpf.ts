@@ -1,15 +1,14 @@
+import { Quad } from '@rdfjs/types';
 import type { IQuadSink } from '../io/IQuadSink';
 import { DatasetSummaryDerivedResourceStub } from '../summary/DatasetSummaryDerivedResourceStub';
-import type {
-  IFragmentationStrategyDatasetSummaryDerivedResourceFileWriterOptions,
-} from './FragmentationStrategyDatasetSummaryDerivedResourceFileWriter';
-import {
-  FragmentationStrategyDatasetSummaryDerivedResourceFileWriter,
-} from './FragmentationStrategyDatasetSummaryDerivedResourceFileWriter';
+import { 
+  FragmentationStrategyDatasetSummaryDerivedResource, 
+  type IFragmentationStrategyDatasetSummaryDerivedResourceOptions 
+} from './FragmentationStrategyDatasetSummaryDerivedResource';
 
 export class FragmentationStrategyDatasetSummaryDerivedResourceQpf
-  extends FragmentationStrategyDatasetSummaryDerivedResourceFileWriter<DatasetSummaryDerivedResourceStub> {
-  public constructor(options: IFragmentationStrategyDatasetSummaryDerivedResourceFileWriterOptions) {
+  extends FragmentationStrategyDatasetSummaryDerivedResource<DatasetSummaryDerivedResourceStub> {
+  public constructor(options: IFragmentationStrategyDatasetSummaryDerivedResourceOptions) {
     super(options);
   }
 
@@ -31,8 +30,8 @@ export class FragmentationStrategyDatasetSummaryDerivedResourceQpf
     for (const [ key, summary ] of this.summaries) {
       const output = summary.serialize();
       const filePathPod = this.getFilePath(output.iri);
-      const path = `${filePathPod}${this.filterFilename.replace(':COUNT:', '0')}.txt`;
-      await this.writeDirAndFile(path, 'qpf', 'utf-8');
+      const path = `${filePathPod}${this.filterFilename.replace(':COUNT:', '0')}$.txt`;
+      await this.writeDirAndFile(path, this.constructQuery(output.quads, {}), 'utf-8');
 
       const metaFile = `${output.iri}${this.metadataQuadsGenerator.getMetaFileName()}`;
       await this.writeMetaFile(output.iri, 1, quadSink, metaFile);
@@ -43,5 +42,15 @@ export class FragmentationStrategyDatasetSummaryDerivedResourceQpf
 
       this.summaries.delete(key);
     }
+  }
+
+  /**
+   * Stub implementation that always returns "qpf"
+   * @param quads Unused
+   * @param context Unused
+   * @returns "qpf"
+   */
+  protected constructQuery(quads: Quad[], context: Record<string, any>): string {
+    return "qpf";
   }
 }

@@ -1,4 +1,9 @@
+import { writeFile } from 'node:fs/promises';
+import { dirname } from 'node:path';
+import { mkdirp } from 'mkdirp';
+
 import type * as RDF from '@rdfjs/types';
+
 import type { IQuadSink } from '../io/IQuadSink';
 import type { IMetadataGenerator } from '../metadata/IMetadataGenerator';
 import { DF } from '../summary/DatasetSummary';
@@ -16,6 +21,9 @@ export abstract class FragmentationStrategyDatasetSummaryDerivedResource<
   protected readonly filterFilename: string;
 
   protected readonly metadataQuadsGenerator: IMetadataGenerator;
+  protected readonly selectorPatterns: string[]
+
+  protected readonly iriToPath: Map<RegExp, string>;
 
   protected readonly podTowebIds: Record<string, string> = {};
   protected readonly directMetadataLinkPredicate: string | undefined;
@@ -27,6 +35,13 @@ export abstract class FragmentationStrategyDatasetSummaryDerivedResource<
     this.exclusionPatterns = options.exclusionPatterns.map(exp => new RegExp(exp, 'u'));
     this.filterFilename = options.filterFilename;
     this.metadataQuadsGenerator = options.metadataQuadsGenerator;
+    this.selectorPatterns = options.selectorPatterns;
+
+    this.iriToPath = new Map(Object.entries(options.iriToPath).map(([ exp, sub ]) => [
+      new RegExp(exp, 'u'),
+      sub,
+    ]));
+
 
     this.checkAllOrNone({
       directMetadataLinkPredicate: options.directMetadataLinkPredicate,
@@ -90,7 +105,7 @@ export abstract class FragmentationStrategyDatasetSummaryDerivedResource<
   ): Promise<void> {
     const metadataQuads = this.metadataQuadsGenerator.generateMetadata({
       podUri: iri,
-      selectorPattern: `${iri}*`,
+      selectorPatterns: this.selectorPatterns.map(pattern => `${iri}${pattern}`),
       filterFilenameTemplate: this.filterFilename,
       nResources: nResources,
     });
@@ -129,6 +144,45 @@ export abstract class FragmentationStrategyDatasetSummaryDerivedResource<
     }
   }
 
+
+  protected getFilePath(iri: string): string {
+    // Remove hash fragment
+    const posHash = iri.indexOf('#');
+    if (posHash >= 0) {
+      iri = iri.slice(0, posHash);
+    }
+
+    // Find base path from the first matching baseIRI
+    let bestMatch: RegExpExecArray | undefined;
+    let bestRegex: RegExp | undefined;
+
+    for (const exp of this.iriToPath.keys()) {
+      const match = exp.exec(iri);
+      if (match && (bestMatch === undefined || match[0].length > bestMatch[0].length)) {
+        bestMatch = match;
+        bestRegex = exp;
+      }
+    }
+
+    // Crash if we did not find a matching baseIRI
+    if (!bestRegex) {
+      throw new Error(`No IRI mapping found for ${iri}`);
+    }
+
+    // Perform substitution and replace illegal directory names
+    let path = iri.replace(bestRegex, this.iriToPath.get(bestRegex)!);
+
+    // Replace illegal directory names
+    path = path.replaceAll(/[*|"<>?:]/ug, '_');
+    return path;
+  }
+
+  protected async writeDirAndFile(path: string, data: string, encoding: BufferEncoding): Promise<void> {
+    await mkdirp(dirname(path));
+    await writeFile(path, data, encoding);
+  }
+  
+
   protected override async flush(quadSink: IQuadSink): Promise<void> {
     this.processBlankNodes();
     for (const [ key, summary ] of this.summaries) {
@@ -138,10 +192,12 @@ export abstract class FragmentationStrategyDatasetSummaryDerivedResource<
       let iriIdx = 0;
       for (const groupSize of output.grouped) {
         const quadsSingleResource = output.quads.slice(startIdx, startIdx + groupSize);
-        const fileName = this.filterFilename.replace(':COUNT:', `${iriIdx}`);
-        for (const quad of quadsSingleResource) {
-          await quadSink.push(`${output.iri}${fileName}`, quad);
-        }
+        const constructQuery = this.constructQuery(quadsSingleResource, {});
+
+        const filePathPod = this.getFilePath(output.iri);
+        const path = `${filePathPod}${this.filterFilename.replace(':COUNT:', `${iriIdx}`)}$.rq`;
+        await this.writeDirAndFile(path, constructQuery, 'utf-8');
+
         startIdx += groupSize;
         iriIdx++;
       }
@@ -151,6 +207,7 @@ export abstract class FragmentationStrategyDatasetSummaryDerivedResource<
       if (this.directMetadataLinkPredicate) {
         await this.writeDirectMetadataLink(output, quadSink, metaFile);
       }
+
       this.summaries.delete(key);
     }
     await super.flush(quadSink);
@@ -172,6 +229,11 @@ export abstract class FragmentationStrategyDatasetSummaryDerivedResource<
       );
     }
   }
+
+  /**
+   * Given summary serialization output and selected quads create the desired query
+   */
+  protected abstract constructQuery(quads: RDF.Quad[], context: Record<string,any>): string;
 }
 
 export interface IFragmentationStrategyDatasetSummaryDerivedResourceOptions
@@ -193,6 +255,16 @@ export interface IFragmentationStrategyDatasetSummaryDerivedResourceOptions
    * TODO: Add void descriptions showing what predicates are answered in a derived resource (Later)
    */
   metadataQuadsGenerator: IMetadataGenerator;
+  /**
+   * Mapping of regular expressions to their replacements,
+   * for determining the file path from a given IRI.
+   * @range {json}
+   */
+  iriToPath: Record<string, string>;
+  /**
+   * What selector patterns should be defined for the given derived resource. 
+   */
+  selectorPatterns: string[]
   /**
    * What files should not be considered when creating derived resources
    */

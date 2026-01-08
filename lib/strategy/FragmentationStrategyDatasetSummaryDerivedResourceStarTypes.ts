@@ -1,9 +1,21 @@
+import type * as RDF from '@rdfjs/types';
+import { Quad } from '@rdfjs/types';
+import {
+  Generator,
+  Parser,
+  type SparqlParser,
+  type Triple,
+  type ConstructQuery,
+  BgpPattern,
+} from 'sparqljs';
+
 import type { IQuadMatcher } from '../quadmatcher/IQuadMatcher';
 import { DatasetSummaryDerivedResourceStarTypes } from '../summary/DatasetSummaryDerivedResourceStarTypes';
 import {
   FragmentationStrategyDatasetSummaryDerivedResource,
   type IFragmentationStrategyDatasetSummaryDerivedResourceOptions,
 } from './FragmentationStrategyDatasetSummaryDerivedResource';
+import { DataFactory } from 'rdf-data-factory';
 
 export class FragmentationStrategyDatasetSummaryDerivedResourceStarTypes
   extends FragmentationStrategyDatasetSummaryDerivedResource<DatasetSummaryDerivedResourceStarTypes> {
@@ -14,6 +26,9 @@ export class FragmentationStrategyDatasetSummaryDerivedResourceStarTypes
   protected readonly typePredicateMatcher: IQuadMatcher;
 
   protected readonly variableReplacementIndicator: string;
+  
+  private readonly parser: SparqlParser = new Parser();
+  private readonly DF = new DataFactory();
 
   public constructor(options: IFragmentationStrategyDatasetSummaryDerivedResourceStarTypesOptions) {
     super(options);
@@ -35,6 +50,33 @@ export class FragmentationStrategyDatasetSummaryDerivedResourceStarTypes
         typePredicateMatcher: this.typePredicateMatcher,
       },
     );
+  }
+
+  protected constructQuery(quads: Quad[], context: Record<string, any>): string {
+    const queryAST: ConstructQuery = <ConstructQuery> this.parser.parse(
+      "CONSTRUCT { ?s ?p ?o } WHERE { ?s ?p ?o. }"
+    );
+
+    const transformTerm = (term: RDF.Term): RDF.Term => {
+      if (
+        term.termType === 'NamedNode' &&
+        term.value.startsWith(this.variableReplacementIndicator)
+      ) {
+        // Extract name: "urn:var:myVariable" -> "myVariable"
+        const varName = term.value.slice(this.variableReplacementIndicator.length);
+        return this.DF.variable(varName);
+      }
+      return term;
+    };
+
+    (<BgpPattern> queryAST.where![0]).triples.push(
+      {
+        subject: <RDF.Quad_Subject> transformTerm(quads[0].subject),
+        predicate: <RDF.Quad_Predicate> transformTerm(quads[0].predicate),
+        object: <RDF.Quad_Object> transformTerm(quads[0].object),
+      }  
+    );
+    return new Generator().stringify(queryAST);
   }
 }
 

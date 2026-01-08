@@ -19,8 +19,6 @@ export * from './strategy/FragmentationStrategyDatasetSummary';
 export * from './strategy/FragmentationStrategyDatasetSummaryBloom';
 export * from './strategy/FragmentationStrategyDatasetSummaryVoID';
 export * from './strategy/FragmentationStrategyDatasetSummaryDerivedResource';
-export * from './strategy/FragmentationStrategyDatasetSummaryDerivedResourceFileWriter';
-export * from './strategy/FragmentationStrategyDatasetSummaryDerivedResourceCset';
 export * from './strategy/FragmentationStrategyDatasetSummaryDerivedResourceCsetValues';
 export * from './strategy/FragmentationStrategyDatasetSummaryDerivedResourceQpf';
 export * from './strategy/FragmentationStrategyDatasetSummaryDerivedResourceStarTypes';

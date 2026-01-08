@@ -53,11 +53,6 @@ export class DatasetSummaryDerivedResourceStarTypes extends DatasetSummaryDerive
           this.DF.namedNode(this.typePredicate!),
           this.DF.namedNode(type),
         ),
-        this.DF.quad(
-          this.DF.namedNode(`${this.variableReplacementIndicator}s`),
-          this.DF.namedNode(`${this.variableReplacementIndicator}p`),
-          this.DF.namedNode(`${this.variableReplacementIndicator}o`),
-        ),
       ]);
     const grouped = selectedQuads.map(quads => quads.length);
     return { quads: selectedQuads.flat(1), iri: this.dataset, grouped };
