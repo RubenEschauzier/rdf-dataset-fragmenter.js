@@ -42,7 +42,7 @@ export class DerivedResourceMetadataGenerator implements IMetadataGenerator {
         this.DF.namedNode(`${this.derivedNamespace}template`),
         this.DF.literal(template),
       ));
-      for (const selectorPattern of input.selectorPatterns){
+      for (const selectorPattern of input.selectorPatterns) {
         quads.push(this.DF.quad(
           descriptorNode,
           this.DF.namedNode(`${this.derivedNamespace}selector`),

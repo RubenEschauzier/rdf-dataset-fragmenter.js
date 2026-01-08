@@ -1,9 +1,9 @@
-import { Quad } from '@rdfjs/types';
+import type { Quad } from '@rdfjs/types';
 import type { IQuadSink } from '../io/IQuadSink';
 import { DatasetSummaryDerivedResourceStub } from '../summary/DatasetSummaryDerivedResourceStub';
-import { 
-  FragmentationStrategyDatasetSummaryDerivedResource, 
-  type IFragmentationStrategyDatasetSummaryDerivedResourceOptions 
+import {
+  FragmentationStrategyDatasetSummaryDerivedResource,
+  type IFragmentationStrategyDatasetSummaryDerivedResourceOptions,
 } from './FragmentationStrategyDatasetSummaryDerivedResource';
 
 export class FragmentationStrategyDatasetSummaryDerivedResourceQpf
@@ -51,6 +51,6 @@ export class FragmentationStrategyDatasetSummaryDerivedResourceQpf
    * @returns "qpf"
    */
   protected constructQuery(quads: Quad[], context: Record<string, any>): string {
-    return "qpf";
+    return 'qpf';
   }
 }

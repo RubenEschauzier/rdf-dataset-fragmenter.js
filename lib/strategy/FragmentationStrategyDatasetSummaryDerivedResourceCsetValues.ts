@@ -1,10 +1,9 @@
 import type * as RDF from '@rdfjs/types';
-import type { IQuadSink } from '../io/IQuadSink';
 import type { IQuadMatcher } from '../quadmatcher/IQuadMatcher';
 import { DatasetSummaryDerivedResourceCset } from '../summary/DatasetSummaryDerivedResourceCset';
-import { 
-  FragmentationStrategyDatasetSummaryDerivedResource, 
-  type IFragmentationStrategyDatasetSummaryDerivedResourceOptions 
+import {
+  FragmentationStrategyDatasetSummaryDerivedResource,
+  type IFragmentationStrategyDatasetSummaryDerivedResourceOptions,
 } from './FragmentationStrategyDatasetSummaryDerivedResource';
 
 export class FragmentationStrategyDatasetSummaryDerivedResourceCsetValues
@@ -42,9 +41,10 @@ export class FragmentationStrategyDatasetSummaryDerivedResourceCsetValues
       },
     );
   }
-  protected constructQuery(quads: RDF.Quad[], context: Record<string, any>){
+
+  protected constructQuery(quads: RDF.Quad[], context: Record<string, any>) {
     const predicates = quads.map(quad => `<${quad.predicate.value}>`);
-    const query = 
+    const query =
 `CONSTRUCT { ?s ?p ?o }
 WHERE {
   ?s ?p ?o .

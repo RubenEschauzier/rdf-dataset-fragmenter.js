@@ -3,7 +3,7 @@ import { DataFactory } from 'rdf-data-factory';
 import type { IMetadataGenerationInput, IMetadataGenerator } from './IMetadataGenerator';
 
 /**
- * Generates metadata for templated derived resources, it assumes the template names are 
+ * Generates metadata for templated derived resources, it assumes the template names are
  * constant and only a counts increments to differentiate them.
  */
 export class TemplateDerivedResourceMetadataGenerator implements IMetadataGenerator {
@@ -51,7 +51,7 @@ export class TemplateDerivedResourceMetadataGenerator implements IMetadataGenera
       const variableSegments: string[] = [];
       for (let v = 1; v <= i; v++) {
         const varName = this.variableTemplate.replace(':COUNT:', `${v}`);
-        
+
         variableSegments.push(`{${varName}}`);
       }
 
@@ -63,8 +63,8 @@ export class TemplateDerivedResourceMetadataGenerator implements IMetadataGenera
         this.DF.namedNode(`${this.derivedNamespace}template`),
         this.DF.literal(templateString),
       ));
-      
-      for (const selectorPattern of input.selectorPatterns){
+
+      for (const selectorPattern of input.selectorPatterns) {
         quads.push(this.DF.quad(
           descriptorNode,
           this.DF.namedNode(`${this.derivedNamespace}selector`),

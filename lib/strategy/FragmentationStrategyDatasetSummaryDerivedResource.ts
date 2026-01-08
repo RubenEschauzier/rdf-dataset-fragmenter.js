@@ -1,8 +1,7 @@
 import { writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
-import { mkdirp } from 'mkdirp';
-
 import type * as RDF from '@rdfjs/types';
+import { mkdirp } from 'mkdirp';
 
 import type { IQuadSink } from '../io/IQuadSink';
 import type { IMetadataGenerator } from '../metadata/IMetadataGenerator';
@@ -21,7 +20,7 @@ export abstract class FragmentationStrategyDatasetSummaryDerivedResource<
   protected readonly filterFilename: string;
 
   protected readonly metadataQuadsGenerator: IMetadataGenerator;
-  protected readonly selectorPatterns: string[]
+  protected readonly selectorPatterns: string[];
 
   protected readonly iriToPath: Map<RegExp, string>;
 
@@ -41,7 +40,6 @@ export abstract class FragmentationStrategyDatasetSummaryDerivedResource<
       new RegExp(exp, 'u'),
       sub,
     ]));
-
 
     this.checkAllOrNone({
       directMetadataLinkPredicate: options.directMetadataLinkPredicate,
@@ -107,7 +105,7 @@ export abstract class FragmentationStrategyDatasetSummaryDerivedResource<
       podUri: iri,
       selectorPatterns: this.selectorPatterns.map(pattern => `${iri}${pattern}`),
       filterFilenameTemplate: this.filterFilename,
-      nResources: nResources,
+      nResources,
     });
 
     for (const quad of metadataQuads) {
@@ -143,7 +141,6 @@ export abstract class FragmentationStrategyDatasetSummaryDerivedResource<
       }
     }
   }
-
 
   protected getFilePath(iri: string): string {
     // Remove hash fragment
@@ -181,7 +178,6 @@ export abstract class FragmentationStrategyDatasetSummaryDerivedResource<
     await mkdirp(dirname(path));
     await writeFile(path, data, encoding);
   }
-  
 
   protected override async flush(quadSink: IQuadSink): Promise<void> {
     this.processBlankNodes();
@@ -233,7 +229,7 @@ export abstract class FragmentationStrategyDatasetSummaryDerivedResource<
   /**
    * Given summary serialization output and selected quads create the desired query
    */
-  protected abstract constructQuery(quads: RDF.Quad[], context: Record<string,any>): string;
+  protected abstract constructQuery(quads: RDF.Quad[], context: Record<string, any>): string;
 }
 
 export interface IFragmentationStrategyDatasetSummaryDerivedResourceOptions
@@ -250,7 +246,7 @@ export interface IFragmentationStrategyDatasetSummaryDerivedResourceOptions
   /**
    * Metadata file construction method
    * TODO: Add a derived resource that is purely a queries of increasing size
-   * TODO: Determine if our approach can also produce .meta files for specific resources and if 
+   * TODO: Determine if our approach can also produce .meta files for specific resources and if
    * we do so correctly
    * TODO: Add void descriptions showing what predicates are answered in a derived resource (Later)
    */
@@ -262,9 +258,9 @@ export interface IFragmentationStrategyDatasetSummaryDerivedResourceOptions
    */
   iriToPath: Record<string, string>;
   /**
-   * What selector patterns should be defined for the given derived resource. 
+   * What selector patterns should be defined for the given derived resource.
    */
-  selectorPatterns: string[]
+  selectorPatterns: string[];
   /**
    * What files should not be considered when creating derived resources
    */

@@ -1,12 +1,15 @@
 import type * as RDF from '@rdfjs/types';
-import { Quad } from '@rdfjs/types';
+import type { Quad } from '@rdfjs/types';
+import { DataFactory } from 'rdf-data-factory';
 import {
+
   Generator,
   Parser,
-  type SparqlParser,
-  type Triple,
-  type ConstructQuery,
+} from 'sparqljs';
+import type {
   BgpPattern,
+  type SparqlParser,
+  type ConstructQuery,
 } from 'sparqljs';
 
 import type { IQuadMatcher } from '../quadmatcher/IQuadMatcher';
@@ -15,7 +18,6 @@ import {
   FragmentationStrategyDatasetSummaryDerivedResource,
   type IFragmentationStrategyDatasetSummaryDerivedResourceOptions,
 } from './FragmentationStrategyDatasetSummaryDerivedResource';
-import { DataFactory } from 'rdf-data-factory';
 
 export class FragmentationStrategyDatasetSummaryDerivedResourceStarTypes
   extends FragmentationStrategyDatasetSummaryDerivedResource<DatasetSummaryDerivedResourceStarTypes> {
@@ -26,7 +28,7 @@ export class FragmentationStrategyDatasetSummaryDerivedResourceStarTypes
   protected readonly typePredicateMatcher: IQuadMatcher;
 
   protected readonly variableReplacementIndicator: string;
-  
+
   private readonly parser: SparqlParser = new Parser();
   private readonly DF = new DataFactory();
 
@@ -54,7 +56,7 @@ export class FragmentationStrategyDatasetSummaryDerivedResourceStarTypes
 
   protected constructQuery(quads: Quad[], context: Record<string, any>): string {
     const queryAST: ConstructQuery = <ConstructQuery> this.parser.parse(
-      "CONSTRUCT { ?s ?p ?o } WHERE { ?s ?p ?o. }"
+      'CONSTRUCT { ?s ?p ?o } WHERE { ?s ?p ?o. }',
     );
 
     const transformTerm = (term: RDF.Term): RDF.Term => {
@@ -74,7 +76,7 @@ export class FragmentationStrategyDatasetSummaryDerivedResourceStarTypes
         subject: <RDF.Quad_Subject> transformTerm(quads[0].subject),
         predicate: <RDF.Quad_Predicate> transformTerm(quads[0].predicate),
         object: <RDF.Quad_Object> transformTerm(quads[0].object),
-      }  
+      },
     );
     return new Generator().stringify(queryAST);
   }
