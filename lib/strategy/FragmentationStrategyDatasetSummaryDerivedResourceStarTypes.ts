@@ -8,8 +8,8 @@ import {
 } from 'sparqljs';
 import type {
   BgpPattern,
-  type SparqlParser,
-  type ConstructQuery,
+  SparqlParser,
+  ConstructQuery,
 } from 'sparqljs';
 
 import type { IQuadMatcher } from '../quadmatcher/IQuadMatcher';
