@@ -100,12 +100,15 @@ export abstract class FragmentationStrategyDatasetSummaryDerivedResource<
     nResources: number,
     quadSink: IQuadSink,
     metaFile: string,
+    context?: Record<string,any>
   ): Promise<void> {
+    console.log(context)
     const metadataQuads = this.metadataQuadsGenerator.generateMetadata({
       podUri: iri,
       selectorPatterns: this.selectorPatterns.map(pattern => `${iri}${pattern}`),
       filterFilenameTemplate: this.filterFilename,
       nResources,
+      context
     });
 
     for (const quad of metadataQuads) {
@@ -191,8 +194,8 @@ export abstract class FragmentationStrategyDatasetSummaryDerivedResource<
         const constructQuery = this.constructQuery(quadsSingleResource, {});
 
         const filePathPod = this.getFilePath(output.iri);
-        const path = `${filePathPod}${this.filterFilename.replace(':COUNT:', `${iriIdx}`)}$.rq`;
-        await this.writeDirAndFile(path, constructQuery, 'utf-8');
+        const path = `${filePathPod}${this.filterFilename.replace(':COUNT:', `${iriIdx}`)}.rq`;
+        await this.writeDirAndFile(path, constructQuery.query, 'utf-8');
 
         startIdx += groupSize;
         iriIdx++;
@@ -229,7 +232,7 @@ export abstract class FragmentationStrategyDatasetSummaryDerivedResource<
   /**
    * Given summary serialization output and selected quads create the desired query
    */
-  protected abstract constructQuery(quads: RDF.Quad[], context: Record<string, any>): string;
+  protected abstract constructQuery(quads: RDF.Quad[], context: Record<string, any>): IConstructQueryOutput;
 }
 
 export interface IFragmentationStrategyDatasetSummaryDerivedResourceOptions
@@ -282,4 +285,10 @@ export interface IFragmentationStrategyDatasetSummaryDerivedResourceOptions
    * Regex to extract pod base URI from a given URI
    */
   podBaseUriExtractionRegex?: string;
+}
+
+
+export interface IConstructQueryOutput{
+  query: string,
+  metadata?: Record<string, any>
 }

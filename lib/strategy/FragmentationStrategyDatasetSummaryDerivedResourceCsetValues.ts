@@ -50,7 +50,7 @@ WHERE {
   ?s ?p ?o .
   VALUES ?p { ${predicates.join(' ')} }
 }`;
-    return query;
+    return { query };
   }
 }
 

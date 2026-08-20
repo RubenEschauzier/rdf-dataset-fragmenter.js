@@ -21,7 +21,7 @@ export * from './strategy/FragmentationStrategyDatasetSummaryDerivedResource';
 export * from './strategy/FragmentationStrategyDatasetSummaryDerivedResourceCsetValues';
 export * from './strategy/FragmentationStrategyDatasetSummaryDerivedResourceQpf';
 export * from './strategy/FragmentationStrategyDatasetSummaryDerivedResourceStarTypes';
-export * from './strategy/FragmentationStrategyDatasetSummaryDerivedResourcePredicateTemplate';
+export * from './strategy/FragmentationStrategyDatasetSummaryDerivedResourceTemplate';
 export * from './strategy/FragmentationStrategyException';
 export * from './strategy/FragmentationStrategyObject';
 export * from './strategy/FragmentationStrategyResourceObject';

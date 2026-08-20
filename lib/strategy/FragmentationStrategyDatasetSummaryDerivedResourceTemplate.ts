@@ -7,12 +7,13 @@ import type { IQuadSink } from '../io/IQuadSink';
 import { DatasetSummaryDerivedResourceStub } from '../summary/DatasetSummaryDerivedResourceStub';
 import {
   FragmentationStrategyDatasetSummaryDerivedResource,
+  IConstructQueryOutput,
   type IFragmentationStrategyDatasetSummaryDerivedResourceOptions,
 } from './FragmentationStrategyDatasetSummaryDerivedResource';
 
 const DF = new DataFactory();
 
-export class FragmentationStrategyDatasetSummaryDerivedResourcePredicateTemplate
+export class FragmentationStrategyDatasetSummaryDerivedResourceTemplate
   extends FragmentationStrategyDatasetSummaryDerivedResource<DatasetSummaryDerivedResourceStub> {
   protected readonly maxSizeStars: number;
 
@@ -31,16 +32,24 @@ export class FragmentationStrategyDatasetSummaryDerivedResourcePredicateTemplate
     this.processBlankNodes();
     for (const [ key, summary ] of this.summaries) {
       const output = summary.serialize();
+      const queryTemplateNames: string[][] = []
       for (let i = 1; i < this.maxSizeStars; i++) {
         const constructQuery = this.constructQuery(output.quads, { nPredicates: i });
+        queryTemplateNames.push(constructQuery.metadata!.templateNames);
 
         const filePathPod = this.getFilePath(output.iri);
-        const path = `${filePathPod}${this.filterFilename.replace(':COUNT:', `${i}`)}$.rq`;
+        const path = `${filePathPod}${this.filterFilename.replace(':COUNT:', `${i}`)}.rq`;
 
-        await this.writeDirAndFile(path, constructQuery, 'utf-8');
+        await this.writeDirAndFile(path, constructQuery.query, 'utf-8');
       }
       const metaFile = `${output.iri}${this.metadataQuadsGenerator.getMetaFileName()}`;
-      await this.writeMetaFile(output.iri, this.maxSizeStars - 1, quadSink, metaFile);
+      await this.writeMetaFile(
+        output.iri, 
+        this.maxSizeStars - 1, 
+        quadSink, 
+        metaFile, 
+        { parameterNames: queryTemplateNames}
+      );
 
       if (this.directMetadataLinkPredicate) {
         await this.writeDirectMetadataLink(output, quadSink, metaFile);
@@ -50,12 +59,15 @@ export class FragmentationStrategyDatasetSummaryDerivedResourcePredicateTemplate
     await super.flush(quadSink);
   }
 
-  protected constructQuery(quads: Quad[], context: Record<string, any>): string {
+  protected constructQuery(quads: Quad[], context: Record<string, any>): IConstructQueryOutput {
     const nPredicates: number = context.nPredicates;
     const queryPatterns: string[] = [];
+    const templateNames: string[] = ["$s$"]
     for (let j = 1; j <= nPredicates; j++) {
-      const varName = `$p${j}$`;
-      queryPatterns.push(`  ?s ${varName} ?o${j} .`);
+      const predTemplate = `$p${j}$`;
+      const objTemplate = `$o${j}$`;
+      queryPatterns.push(`  $s$ ${predTemplate} ${objTemplate} .`);
+      templateNames.push(predTemplate, objTemplate);
     }
 
     const constructQuery =
@@ -65,7 +77,7 @@ ${queryPatterns.join('\n')}
 WHERE {
 ${queryPatterns.join('\n')}
 }`;
-    return constructQuery;
+    return { query: constructQuery, metadata: { templateNames } };
   }
 }
 

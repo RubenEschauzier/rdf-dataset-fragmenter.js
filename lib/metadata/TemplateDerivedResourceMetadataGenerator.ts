@@ -34,6 +34,12 @@ export class TemplateDerivedResourceMetadataGenerator implements IMetadataGenera
   }
 
   public generateMetadata(input: IMetadataGenerationInput): RDF.Quad[] {
+    console.log(input)
+    console.log(input.context)
+    console.trace()
+    if (!input.context || !input.context.parameterNames){
+      throw new Error("Input requires context with parameterNames");
+    }
     const quads: RDF.Quad[] = [];
     const podNode = this.DF.namedNode(input.podUri);
 
@@ -48,15 +54,18 @@ export class TemplateDerivedResourceMetadataGenerator implements IMetadataGenera
 
       let templateString = this.templatesTemplate.replace(':COUNT:', `${i}`);
 
-      const variableSegments: string[] = [];
-      for (let v = 1; v <= i; v++) {
-        const varName = this.variableTemplate.replace(':COUNT:', `${v}`);
+      // const variableSegments: string[] = [];
+      // for (let v = 1; v <= i; v++) {
+      //   const varName = this.variableTemplate.replace(':COUNT:', `${v}`);
 
-        variableSegments.push(`{${varName}}`);
-      }
+      //   variableSegments.push(`{${varName}}`);
+      // }
+      
+
 
       const separator = templateString.endsWith('/') ? '' : '/';
-      templateString += `${separator}${variableSegments.join('/')}`;
+      templateString += `${separator}${input.context.parameterNames[i-1]
+        .map((param: string) => `{${param}}`).join('/')}`;
 
       quads.push(this.DF.quad(
         descriptorNode,

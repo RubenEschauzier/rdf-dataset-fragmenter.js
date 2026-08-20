@@ -16,6 +16,7 @@ import type { IQuadMatcher } from '../quadmatcher/IQuadMatcher';
 import { DatasetSummaryDerivedResourceStarTypes } from '../summary/DatasetSummaryDerivedResourceStarTypes';
 import {
   FragmentationStrategyDatasetSummaryDerivedResource,
+  IConstructQueryOutput,
   type IFragmentationStrategyDatasetSummaryDerivedResourceOptions,
 } from './FragmentationStrategyDatasetSummaryDerivedResource';
 
@@ -54,7 +55,7 @@ export class FragmentationStrategyDatasetSummaryDerivedResourceStarTypes
     );
   }
 
-  protected constructQuery(quads: Quad[], context: Record<string, any>): string {
+  protected constructQuery(quads: Quad[], context: Record<string, any>): IConstructQueryOutput {
     const queryAST: ConstructQuery = <ConstructQuery> this.parser.parse(
       'CONSTRUCT { ?s ?p ?o } WHERE { ?s ?p ?o. }',
     );
@@ -78,7 +79,7 @@ export class FragmentationStrategyDatasetSummaryDerivedResourceStarTypes
         object: <RDF.Quad_Object> transformTerm(quads[0].object),
       },
     );
-    return new Generator().stringify(queryAST);
+    return { query: new Generator().stringify(queryAST) };
   }
 }
 
