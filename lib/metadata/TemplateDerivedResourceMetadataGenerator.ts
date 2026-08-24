@@ -34,9 +34,6 @@ export class TemplateDerivedResourceMetadataGenerator implements IMetadataGenera
   }
 
   public generateMetadata(input: IMetadataGenerationInput): RDF.Quad[] {
-    console.log(input)
-    console.log(input.context)
-    console.trace()
     if (!input.context || !input.context.parameterNames){
       throw new Error("Input requires context with parameterNames");
     }
@@ -65,7 +62,7 @@ export class TemplateDerivedResourceMetadataGenerator implements IMetadataGenera
 
       const separator = templateString.endsWith('/') ? '' : '/';
       templateString += `${separator}${input.context.parameterNames[i-1]
-        .map((param: string) => `{${param}}`).join('/')}`;
+        .map((param: string) => `{${param.replaceAll("$", "")}}`).join('/')}`;
 
       quads.push(this.DF.quad(
         descriptorNode,

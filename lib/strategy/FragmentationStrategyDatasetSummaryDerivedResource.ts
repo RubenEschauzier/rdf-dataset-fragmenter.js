@@ -102,7 +102,6 @@ export abstract class FragmentationStrategyDatasetSummaryDerivedResource<
     metaFile: string,
     context?: Record<string,any>
   ): Promise<void> {
-    console.log(context)
     const metadataQuads = this.metadataQuadsGenerator.generateMetadata({
       podUri: iri,
       selectorPatterns: this.selectorPatterns.map(pattern => `${iri}${pattern}`),
