@@ -29,6 +29,13 @@ export abstract class FragmentationStrategyDatasetSummaryDerivedResource<
   protected readonly profilePredicateRegex: RegExp | undefined;
   protected readonly podBaseUriExtractionRegex: RegExp | undefined;
 
+  protected readonly fileMetadataLinkPredicate: string | undefined;
+  /**
+   * The document IRIs encountered per dataset.
+   * Only tracked when fileMetadataLinkPredicate is defined.
+   */
+  protected readonly datasetToFiles: Map<string, Set<string>> = new Map();
+
   public constructor(options: IFragmentationStrategyDatasetSummaryDerivedResourceOptions) {
     super(options);
     this.exclusionPatterns = options.exclusionPatterns.map(exp => new RegExp(exp, 'u'));
@@ -52,6 +59,8 @@ export abstract class FragmentationStrategyDatasetSummaryDerivedResource<
       this.profilePredicateRegex = new RegExp(options.profilePredicateRegex, 'u');
       this.podBaseUriExtractionRegex = new RegExp(options.podBaseUriExtractionRegex, 'u');
     }
+
+    this.fileMetadataLinkPredicate = options.fileMetadataLinkPredicate;
   }
 
   protected override subjectToDatasets(subject: string): Set<string> {
@@ -82,9 +91,22 @@ export abstract class FragmentationStrategyDatasetSummaryDerivedResource<
     ) {
       const matches = this.podBaseUriExtractionRegex!.exec(quad.object.value);
       if (matches) {
-        for (const match of matches) {
+        for (const match of new Set(matches)) {
           this.podTowebIds[match] = quad.object.value;
         }
+      }
+    }
+    // Linking every file of a dataset to the metadata file requires knowing all
+    // documents that make up that dataset.
+    if (this.fileMetadataLinkPredicate && quad.subject.termType === 'NamedNode') {
+      const file = this.toDocumentIri(quad.subject.value);
+      for (const dataset of this.subjectToDatasets(quad.subject.value)) {
+        let files = this.datasetToFiles.get(dataset);
+        if (!files) {
+          files = new Set();
+          this.datasetToFiles.set(dataset, files);
+        }
+        files.add(file);
       }
     }
   }
@@ -129,7 +151,9 @@ export abstract class FragmentationStrategyDatasetSummaryDerivedResource<
   ): Promise<void> {
     const podMatches = this.podBaseUriExtractionRegex!.exec(output.iri);
     if (podMatches) {
-      for (const match of podMatches) {
+      // The regex captures the pod base URI, so the full match and the capture group
+      // are the same string. Only write the link once per distinct pod base URI.
+      for (const match of new Set(podMatches)) {
         const summaryWebId = this.podTowebIds[match];
         if (!summaryWebId) {
           throw new Error(`Found summary for pod without registered WebId: ${match}`);
@@ -142,6 +166,40 @@ export abstract class FragmentationStrategyDatasetSummaryDerivedResource<
         await quadSink.push(summaryWebId, metaQuad);
       }
     }
+  }
+
+  /**
+   * Link every document of a dataset to the metadata file describing the derived resources
+   * that dataset exposes.
+   * @param dataset The dataset (pod) the documents belong to
+   * @param quadSink Quad sink to write to
+   * @param metaFile The iri of the .meta file of the given derived resource
+   */
+  protected async writeFileMetadataLinks(
+    dataset: string,
+    quadSink: IQuadSink,
+    metaFile: string,
+  ): Promise<void> {
+    const files = this.datasetToFiles.get(dataset);
+    if (!files) {
+      return;
+    }
+    for (const file of files) {
+      await quadSink.push(file, DF.quad(
+        DF.namedNode(file),
+        DF.namedNode(this.fileMetadataLinkPredicate!),
+        DF.namedNode(metaFile),
+      ));
+    }
+    this.datasetToFiles.delete(dataset);
+  }
+
+  /**
+   * The IRI of the document a term is part of, i.e., the IRI without its hash fragment.
+   */
+  protected toDocumentIri(iri: string): string {
+    const posHash = iri.indexOf('#');
+    return posHash >= 0 ? iri.slice(0, posHash) : iri;
   }
 
   protected getFilePath(iri: string): string {
@@ -204,6 +262,9 @@ export abstract class FragmentationStrategyDatasetSummaryDerivedResource<
 
       if (this.directMetadataLinkPredicate) {
         await this.writeDirectMetadataLink(output, quadSink, metaFile);
+      }
+      if (this.fileMetadataLinkPredicate) {
+        await this.writeFileMetadataLinks(key, quadSink, metaFile);
       }
 
       this.summaries.delete(key);
@@ -284,6 +345,13 @@ export interface IFragmentationStrategyDatasetSummaryDerivedResourceOptions
    * Regex to extract pod base URI from a given URI
    */
   podBaseUriExtractionRegex?: string;
+  /**
+   * If defined, every document of a dataset gets a triple with this predicate pointing to the
+   * .meta file that specifies the derived resources of that dataset. 
+   * Should only be enabled on a single strategy, as every strategy that enables it writes
+   * its own copy of the triple.
+   */
+  fileMetadataLinkPredicate?: string;
 }
 
 

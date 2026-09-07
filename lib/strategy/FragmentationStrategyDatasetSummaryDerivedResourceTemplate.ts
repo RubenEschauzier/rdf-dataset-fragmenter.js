@@ -81,6 +81,9 @@ export abstract class FragmentationStrategyDatasetSummaryDerivedResourceTemplate
       if (this.directMetadataLinkPredicate) {
         await this.writeDirectMetadataLink(output, quadSink, metaFile);
       }
+      if (this.fileMetadataLinkPredicate) {
+        await this.writeFileMetadataLinks(key, quadSink, metaFile);
+      }
       this.summaries.delete(key);
     }
     await super.flush(quadSink);
