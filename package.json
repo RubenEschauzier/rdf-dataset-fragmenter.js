@@ -18,7 +18,8 @@
     "decentralization"
   ],
   "main": "lib/index.js",
-  "typings": "lib/index",
+  "types": "lib/index.d.ts",
+  "typings": "lib/index.d.ts",
   "bin": {
     "rdf-dataset-fragmenter": "bin/runner.js"
   },

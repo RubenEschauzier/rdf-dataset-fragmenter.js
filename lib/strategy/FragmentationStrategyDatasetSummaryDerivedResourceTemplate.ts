@@ -1,25 +1,52 @@
 import type { Quad } from '@rdfjs/types';
 
-import { DataFactory } from 'rdf-data-factory';
-
-// Assumed standard factory
 import type { IQuadSink } from '../io/IQuadSink';
 import { DatasetSummaryDerivedResourceStub } from '../summary/DatasetSummaryDerivedResourceStub';
 import {
   FragmentationStrategyDatasetSummaryDerivedResource,
-  IConstructQueryOutput,
+  type IConstructQueryOutput,
   type IFragmentationStrategyDatasetSummaryDerivedResourceOptions,
 } from './FragmentationStrategyDatasetSummaryDerivedResource';
 
-const DF = new DataFactory();
-
-export class FragmentationStrategyDatasetSummaryDerivedResourceTemplate
+/**
+ * Base class for derived resources that expose a ladder of fully parameterized queries of a
+ * fixed shape and increasing size. The shape itself is provided by the subclasses.
+ * Can generate both SELECT and CONSTRUCT queries
+ * */
+export abstract class FragmentationStrategyDatasetSummaryDerivedResourceTemplate
   extends FragmentationStrategyDatasetSummaryDerivedResource<DatasetSummaryDerivedResourceStub> {
-  protected readonly maxSizeStars: number;
+  protected readonly minSizeConstruct: number;
+  protected readonly maxSizeConstruct: number;
+  protected readonly minSizeSelect: number;
+  protected readonly maxSizeSelect: number;
 
-  public constructor(options: IFragmentationStrategyDatasetSummaryDerivedResourcePredictateTemplateOptions) {
+  /**
+   * The queries to generate per dataset, in the order they are numbered in the filter
+   * filenames and the metadata file.
+   */
+  protected readonly querySpecs: ITemplateQuerySpec[];
+
+  public constructor(options: IFragmentationStrategyDatasetSummaryDerivedResourceTemplateOptions) {
     super(options);
-    this.maxSizeStars = options.maxSizeStars;
+    this.minSizeConstruct = options.minSizeConstruct ?? 1;
+    this.maxSizeConstruct = options.maxSizeConstruct ?? 0;
+    this.minSizeSelect = options.minSizeSelect ?? 1;
+    this.maxSizeSelect = options.maxSizeSelect ?? 0;
+
+    if (this.minSizeConstruct < 1 || this.minSizeSelect < 1) {
+      throw new Error(`Template query sizes must be at least 1`);
+    }
+
+    this.querySpecs = [
+      ...this.sizeRange(this.minSizeConstruct, this.maxSizeConstruct)
+        .map(size => ({ size, queryType: 'construct' as const })),
+      ...this.sizeRange(this.minSizeSelect, this.maxSizeSelect)
+        .map(size => ({ size, queryType: 'select' as const })),
+    ];
+
+    if (this.querySpecs.length === 0) {
+      throw new Error(`No template queries to generate: both the CONSTRUCT and SELECT size range are empty`);
+    }
   }
 
   protected createSummary(dataset: string): DatasetSummaryDerivedResourceStub {
@@ -32,23 +59,23 @@ export class FragmentationStrategyDatasetSummaryDerivedResourceTemplate
     this.processBlankNodes();
     for (const [ key, summary ] of this.summaries) {
       const output = summary.serialize();
-      const queryTemplateNames: string[][] = []
-      for (let i = 1; i < this.maxSizeStars; i++) {
-        const constructQuery = this.constructQuery(output.quads, { nPredicates: i });
+      const queryTemplateNames: string[][] = [];
+      for (const [ index, spec ] of this.querySpecs.entries()) {
+        const constructQuery = this.constructQuery(output.quads, spec);
         queryTemplateNames.push(constructQuery.metadata!.templateNames);
 
         const filePathPod = this.getFilePath(output.iri);
-        const path = `${filePathPod}${this.filterFilename.replace(':COUNT:', `${i}`)}.rq`;
+        const path = `${filePathPod}${this.filterFilename.replace(':COUNT:', `${index + 1}`)}.rq`;
 
         await this.writeDirAndFile(path, constructQuery.query, 'utf-8');
       }
       const metaFile = `${output.iri}${this.metadataQuadsGenerator.getMetaFileName()}`;
       await this.writeMetaFile(
-        output.iri, 
-        this.maxSizeStars - 1, 
-        quadSink, 
-        metaFile, 
-        { parameterNames: queryTemplateNames}
+        output.iri,
+        this.querySpecs.length,
+        quadSink,
+        metaFile,
+        { parameterNames: queryTemplateNames },
       );
 
       if (this.directMetadataLinkPredicate) {
@@ -59,33 +86,83 @@ export class FragmentationStrategyDatasetSummaryDerivedResourceTemplate
     await super.flush(quadSink);
   }
 
+  // eslint-disable-next-line unused-imports/no-unused-vars
   protected constructQuery(quads: Quad[], context: Record<string, any>): IConstructQueryOutput {
-    const nPredicates: number = context.nPredicates;
-    const queryPatterns: string[] = [];
-    const templateNames: string[] = ["$s$"]
-    for (let j = 1; j <= nPredicates; j++) {
-      const predTemplate = `$p${j}$`;
-      const objTemplate = `$o${j}$`;
-      queryPatterns.push(`  $s$ ${predTemplate} ${objTemplate} .`);
-      templateNames.push(predTemplate, objTemplate);
-    }
+    const { size, queryType } = <ITemplateQuerySpec> context;
+    const { patterns, templateNames } = this.shapePatterns(size);
+    const queryBody = patterns.map(pattern => `  ${pattern}`).join('\n');
 
-    const constructQuery =
-`CONSTRUCT {
-${queryPatterns.join('\n')}
+    const query = queryType === 'construct' ?
+        `CONSTRUCT {
+${queryBody}
 }
 WHERE {
-${queryPatterns.join('\n')}
+${queryBody}
+}` :
+        `SELECT * WHERE {
+${queryBody}
 }`;
-    return { query: constructQuery, metadata: { templateNames } };
+    return { query, metadata: { templateNames }};
   }
+
+  /**
+   * All sizes in the inclusive range, or an empty list if the range is empty.
+   */
+  protected sizeRange(minSize: number, maxSize: number): number[] {
+    const sizes: number[] = [];
+    for (let size = minSize; size <= maxSize; size++) {
+      sizes.push(size);
+    }
+    return sizes;
+  }
+
+  /**
+   * Produce the triple patterns of this shape with the given number of predicates.
+   * @param size The number of predicates (and with that, triple patterns) in the shape
+   */
+  protected abstract shapePatterns(size: number): IShapePatterns;
 }
 
-export interface IFragmentationStrategyDatasetSummaryDerivedResourcePredictateTemplateOptions
+export interface ITemplateQuerySpec {
+  /**
+   * The number of predicates in the query shape.
+   */
+  size: number;
+  /**
+   * The projection clause used for the query.
+   */
+  queryType: 'construct' | 'select';
+}
+
+export interface IShapePatterns {
+  /**
+   * The triple patterns of the shape, without indentation and terminated by a dot.
+   */
+  patterns: string[];
+  /**
+   * All template names used in the patterns, in the order they should be bound in the URL template.
+   */
+  templateNames: string[];
+}
+
+export interface IFragmentationStrategyDatasetSummaryDerivedResourceTemplateOptions
   extends IFragmentationStrategyDatasetSummaryDerivedResourceOptions {
   /**
-   * The maximum number of predicates in the star-join ladder.
-   * e.g., if set to 3, it generates resources for 1, 2, and 3 predicates.
+   * The smallest query size emitted as a CONSTRUCT query. Defaults to 1.
    */
-  maxSizeStars: number;
+  minSizeConstruct?: number;
+  /**
+   * The largest query size emitted as a CONSTRUCT query. Defaults to 0, which emits no
+   * CONSTRUCT queries.
+   */
+  maxSizeConstruct?: number;
+  /**
+   * The smallest query size emitted as a SELECT query. Defaults to 1.
+   */
+  minSizeSelect?: number;
+  /**
+   * The largest query size emitted as a SELECT query. Defaults to 0, which emits no
+   * SELECT queries.
+   */
+  maxSizeSelect?: number;
 }
