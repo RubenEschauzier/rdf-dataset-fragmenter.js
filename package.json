@@ -1,6 +1,6 @@
 {
   "name": "rdf-dataset-fragmenter",
-  "version": "2.9.0",
+  "version": "2.10.0",
   "packageManager": "yarn@1.22.22",
   "description": "Fragments an RDF dataset into multiple parts",
   "author": "Ruben Taelman <rubensworks@gmail.com>",
@@ -54,7 +54,7 @@
     "componentsjs": "^6.0.0",
     "dockerode": "^4.0.0",
     "imurmurhash": "^0.1.4",
-    "lru-cache": "^10.3.0",
+    "lru-cache": "^11.2.7",
     "mkdirp": "^3.0.1",
     "rdf-parse": "^3.0.0",
     "rdf-serialize": "^3.0.0",
@@ -66,19 +66,19 @@
   },
   "devDependencies": {
     "@rubensworks/eslint-config": "^3.0.0",
-    "@types/dockerode": "^3.3.0",
-    "@types/jest": "^29.0.0",
+    "@types/dockerode": "^4.0.1",
+    "@types/jest": "^30.0.0",
     "arrayify-stream": "^2.0.0",
     "componentsjs-generator": "^4.0.0",
     "eslint": "^8.0.0",
     "husky": "^9.0.0",
-    "jest": "^29.0.0",
+    "jest": "^30.0.0",
     "jest-rdf": "^1.0.0",
     "manual-git-changelog": "^1.0.0",
     "rdf-data-factory": "^1.0.0",
     "streamify-array": "^1.0.0",
     "streamify-string": "^1.0.0",
     "ts-jest": "^29.0.0",
-    "typescript": "^5.0.0"
+    "typescript": "^6.0.0"
   }
 }
