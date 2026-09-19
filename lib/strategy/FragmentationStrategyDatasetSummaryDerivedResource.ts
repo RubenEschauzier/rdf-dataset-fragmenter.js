@@ -48,19 +48,20 @@ export abstract class FragmentationStrategyDatasetSummaryDerivedResource<
       sub,
     ]));
 
+    // Both link types resolve the WebId of the pod a resource belongs to,
+    // so either of them requires the regexes that discover those WebIds.
     this.checkAllOrNone({
-      directMetadataLinkPredicate: options.directMetadataLinkPredicate,
+      metadataLinkPredicate: options.directMetadataLinkPredicate ?? options.fileMetadataLinkPredicate,
       profilePredicateRegex: options.profilePredicateRegex,
       podBaseUriExtractionRegex: options.podBaseUriExtractionRegex,
-    });
+    }, 'Configuration of directMetadataLinkPredicate/fileMetadataLinkPredicate');
 
     this.directMetadataLinkPredicate = options.directMetadataLinkPredicate;
+    this.fileMetadataLinkPredicate = options.fileMetadataLinkPredicate;
     if (options.profilePredicateRegex && options.podBaseUriExtractionRegex) {
       this.profilePredicateRegex = new RegExp(options.profilePredicateRegex, 'u');
       this.podBaseUriExtractionRegex = new RegExp(options.podBaseUriExtractionRegex, 'u');
     }
-
-    this.fileMetadataLinkPredicate = options.fileMetadataLinkPredicate;
   }
 
   protected override subjectToDatasets(subject: string): Set<string> {
@@ -84,11 +85,9 @@ export abstract class FragmentationStrategyDatasetSummaryDerivedResource<
 
   protected override async handleQuad(quad: RDF.Quad): Promise<void> {
     await super.handleQuad(quad);
-    // Including direct metadata links requires storing all references to a
-    // webId we find.
-    if (this.directMetadataLinkPredicate && this.profilePredicateRegex &&
-      this.profilePredicateRegex.test(quad.predicate.value)
-    ) {
+    // Both link types point at a WebId, so we store all references to a
+    // webId we find. The regex is only defined when such links are requested.
+    if (this.profilePredicateRegex && this.profilePredicateRegex.test(quad.predicate.value)) {
       const matches = this.podBaseUriExtractionRegex!.exec(quad.object.value);
       if (matches) {
         for (const match of new Set(matches)) {
@@ -149,46 +148,60 @@ export abstract class FragmentationStrategyDatasetSummaryDerivedResource<
     quadSink: IQuadSink,
     metaFile: string,
   ): Promise<void> {
-    const podMatches = this.podBaseUriExtractionRegex!.exec(output.iri);
-    if (podMatches) {
-      // The regex captures the pod base URI, so the full match and the capture group
-      // are the same string. Only write the link once per distinct pod base URI.
-      for (const match of new Set(podMatches)) {
-        const summaryWebId = this.podTowebIds[match];
-        if (!summaryWebId) {
-          throw new Error(`Found summary for pod without registered WebId: ${match}`);
-        }
-        const metaQuad = DF.quad(
-          DF.namedNode(summaryWebId),
-          DF.namedNode(this.directMetadataLinkPredicate!),
-          DF.namedNode(metaFile),
-        );
-        await quadSink.push(summaryWebId, metaQuad);
-      }
+    const summaryWebId = this.getPodWebId(output.iri);
+    if (summaryWebId) {
+      const metaQuad = DF.quad(
+        DF.namedNode(summaryWebId),
+        DF.namedNode(this.directMetadataLinkPredicate!),
+        DF.namedNode(metaFile),
+      );
+      await quadSink.push(summaryWebId, metaQuad);
     }
   }
 
   /**
-   * Link every document of a dataset to the metadata file describing the derived resources
-   * that dataset exposes.
+   * The WebId registered for the pod the given IRI belongs to, or undefined
+   * if the IRI is not part of a pod.
+   * @param iri The IRI to find the pod WebId for
+   */
+  protected getPodWebId(iri: string): string | undefined {
+    const podMatches = this.podBaseUriExtractionRegex!.exec(iri);
+    if (!podMatches) {
+      return undefined;
+    }
+    // The regex captures the pod base URI, so the full match and the capture group
+    // are the same string.
+    const podBaseUri = podMatches[0];
+    const webId = this.podTowebIds[podBaseUri];
+    if (!webId) {
+      throw new Error(`Found summary for pod without registered WebId: ${podBaseUri}`);
+    }
+    return webId;
+  }
+
+  /**
+   * Link every document of a dataset to the WebId of the pod it is part of. That WebId in
+   * turn points to the metadata file describing the derived resources the pod exposes.
    * @param dataset The dataset (pod) the documents belong to
    * @param quadSink Quad sink to write to
-   * @param metaFile The iri of the .meta file of the given derived resource
    */
   protected async writeFileMetadataLinks(
     dataset: string,
     quadSink: IQuadSink,
-    metaFile: string,
   ): Promise<void> {
     const files = this.datasetToFiles.get(dataset);
     if (!files) {
       return;
     }
     for (const file of files) {
+      const webId = this.getPodWebId(file);
+      if (!webId) {
+        continue;
+      }
       await quadSink.push(file, DF.quad(
         DF.namedNode(file),
         DF.namedNode(this.fileMetadataLinkPredicate!),
-        DF.namedNode(metaFile),
+        DF.namedNode(webId),
       ));
     }
     this.datasetToFiles.delete(dataset);
@@ -264,7 +277,7 @@ export abstract class FragmentationStrategyDatasetSummaryDerivedResource<
         await this.writeDirectMetadataLink(output, quadSink, metaFile);
       }
       if (this.fileMetadataLinkPredicate) {
-        await this.writeFileMetadataLinks(key, quadSink, metaFile);
+        await this.writeFileMetadataLinks(key, quadSink);
       }
 
       this.summaries.delete(key);
@@ -297,15 +310,6 @@ export abstract class FragmentationStrategyDatasetSummaryDerivedResource<
 
 export interface IFragmentationStrategyDatasetSummaryDerivedResourceOptions
   extends IFragmentationStrategyDatasetSummaryOptions {
-  /**
-   * Make derived resource for all star-shaped types, make derived resource for all star-shaped
-   * entities sets without type (so it shows what predicates form an entity). If query gives a type it can
-   * just use type-based derived resources.
-   * If the engine has no type it can try to infer what type queries it should issue.
-   * Proceed as follows check all star-shaped predicate sets without type, if the query shape
-   * is a subset of a predicate set without types we cannot use any derived resource.
-   * If not, we can determine the types to query by downloading
-   */
   /**
    * Metadata file construction method
    * TODO: Add a derived resource that is purely a queries of increasing size
@@ -347,7 +351,8 @@ export interface IFragmentationStrategyDatasetSummaryDerivedResourceOptions
   podBaseUriExtractionRegex?: string;
   /**
    * If defined, every document of a dataset gets a triple with this predicate pointing to the
-   * .meta file that specifies the derived resources of that dataset. 
+   * WebId of the pod that dataset belongs to, which itself links to the .meta file specifying
+   * the derived resources of that dataset.
    * Should only be enabled on a single strategy, as every strategy that enables it writes
    * its own copy of the triple.
    */
