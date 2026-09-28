@@ -82,7 +82,8 @@ export class TemplateDerivedResourceMetadataGenerator implements IMetadataGenera
       quads.push(this.DF.quad(
         descriptorNode,
         this.DF.namedNode(`${this.derivedNamespace}filter`),
-        this.DF.namedNode(filter),
+        // Resources are counted from 1 here, the filters from 0
+        input.filters ? this.DF.literal(input.filters[i - 1]) : this.DF.namedNode(filter),
       ));
     }
 

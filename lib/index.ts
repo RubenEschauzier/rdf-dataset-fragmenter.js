@@ -20,6 +20,7 @@ export * from './strategy/FragmentationStrategyDatasetSummaryVoID';
 export * from './strategy/FragmentationStrategyDatasetSummaryDerivedResource';
 export * from './strategy/FragmentationStrategyDatasetSummaryDerivedResourceCsetValues';
 export * from './strategy/FragmentationStrategyDatasetSummaryDerivedResourceQpf';
+export * from './strategy/FragmentationStrategyDatasetSummaryDerivedResourcePatternBatch';
 export * from './strategy/FragmentationStrategyDatasetSummaryDerivedResourceStarTypes';
 export * from './strategy/FragmentationStrategyDatasetSummaryDerivedResourceTemplate';
 export * from './strategy/FragmentationStrategyDatasetSummaryDerivedResourceLinearTemplate';

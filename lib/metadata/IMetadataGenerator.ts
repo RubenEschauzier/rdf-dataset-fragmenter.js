@@ -35,6 +35,12 @@ export interface IMetadataGenerationInput {
    */
   nResources: number;
   /**
+   * The filter of every resource, in the order the resources are generated. When given, each filter
+   * is written into the metadata as a literal, so that a client can identify the resources without
+   * requesting their filters; otherwise the metadata points to the filter files.
+   */
+  filters?: string[];
+  /**
    * Optional context
    */
   context?: Record<string, any>;

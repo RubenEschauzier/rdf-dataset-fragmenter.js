@@ -18,6 +18,7 @@ export abstract class FragmentationStrategyDatasetSummaryDerivedResource<
 > extends FragmentationStrategyDatasetSummary<T> {
   protected readonly exclusionPatterns: RegExp[];
   protected readonly filterFilename: string;
+  protected readonly inlineFilters: boolean;
 
   protected readonly metadataQuadsGenerator: IMetadataGenerator;
   protected readonly selectorPatterns: string[];
@@ -40,6 +41,7 @@ export abstract class FragmentationStrategyDatasetSummaryDerivedResource<
     super(options);
     this.exclusionPatterns = options.exclusionPatterns.map(exp => new RegExp(exp, 'u'));
     this.filterFilename = options.filterFilename;
+    this.inlineFilters = options.inlineFilters ?? false;
     this.metadataQuadsGenerator = options.metadataQuadsGenerator;
     this.selectorPatterns = options.selectorPatterns;
 
@@ -116,20 +118,24 @@ export abstract class FragmentationStrategyDatasetSummaryDerivedResource<
    * @param output The serialization output of the derived resource
    * @param quadSink Quad sink to write to
    * @param metaFile The iri of the .meta file of the given derived resource
+   * @param context Context for the metadata generator
+   * @param filters The filter of every resource, written into the metadata when filters are inlined
    */
   protected async writeMetaFile(
     iri: string,
     nResources: number,
     quadSink: IQuadSink,
     metaFile: string,
-    context?: Record<string,any>
+    context?: Record<string,any>,
+    filters?: string[],
   ): Promise<void> {
     const metadataQuads = this.metadataQuadsGenerator.generateMetadata({
       podUri: iri,
       selectorPatterns: this.selectorPatterns.map(pattern => `${iri}${pattern}`),
       filterFilenameTemplate: this.filterFilename,
       nResources,
-      context
+      context,
+      filters: this.inlineFilters ? filters : undefined,
     });
 
     for (const quad of metadataQuads) {
@@ -246,9 +252,11 @@ export abstract class FragmentationStrategyDatasetSummaryDerivedResource<
 
       let startIdx = 0;
       let iriIdx = 0;
+      const filters: string[] = [];
       for (const groupSize of output.grouped) {
         const quadsSingleResource = output.quads.slice(startIdx, startIdx + groupSize);
         const constructQuery = this.constructQuery(quadsSingleResource, {});
+        filters.push(constructQuery.query);
 
         const filePathPod = this.getFilePath(output.iri);
         const path = `${filePathPod}${this.filterFilename.replace(':COUNT:', `${iriIdx}`)}.rq`;
@@ -258,7 +266,7 @@ export abstract class FragmentationStrategyDatasetSummaryDerivedResource<
         iriIdx++;
       }
       const metaFile = `${output.iri}${this.metadataQuadsGenerator.getMetaFileName()}`;
-      await this.writeMetaFile(output.iri, output.grouped.length, quadSink, metaFile);
+      await this.writeMetaFile(output.iri, output.grouped.length, quadSink, metaFile, undefined, filters);
 
       if (this.directMetadataLinkPredicate) {
         await this.writeDirectMetadataLink(output, quadSink, metaFile);
@@ -332,6 +340,13 @@ export interface IFragmentationStrategyDatasetSummaryDerivedResourceOptions
    * Filename template where filters will be stored
    */
   filterFilename: string;
+  /**
+   * If the filters should also be written into the .meta file, as literals, instead of only being
+   * referred to there. A client can then identify the derived resources of a pod from its .meta
+   * alone, without requesting every filter. The filter files are written either way.
+   * @default {false}
+   */
+  inlineFilters?: boolean;
   /**
    * If defined this derived resource class will include a direct link to the .meta file
    * containing the derived resource specification using the provided predicate

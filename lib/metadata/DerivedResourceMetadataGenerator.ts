@@ -52,7 +52,7 @@ export class DerivedResourceMetadataGenerator implements IMetadataGenerator {
       quads.push(this.DF.quad(
         descriptorNode,
         this.DF.namedNode(`${this.derivedNamespace}filter`),
-        this.DF.namedNode(filter),
+        input.filters ? this.DF.literal(input.filters[i]) : this.DF.namedNode(filter),
       ));
     }
     return quads;

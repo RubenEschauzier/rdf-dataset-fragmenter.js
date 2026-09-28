@@ -60,9 +60,11 @@ export abstract class FragmentationStrategyDatasetSummaryDerivedResourceTemplate
     for (const [ key, summary ] of this.summaries) {
       const output = summary.serialize();
       const queryTemplateNames: string[][] = [];
+      const filters: string[] = [];
       for (const [ index, spec ] of this.querySpecs.entries()) {
         const constructQuery = this.constructQuery(output.quads, spec);
         queryTemplateNames.push(constructQuery.metadata!.templateNames);
+        filters.push(constructQuery.query);
 
         const filePathPod = this.getFilePath(output.iri);
         const path = `${filePathPod}${this.filterFilename.replace(':COUNT:', `${index + 1}`)}.rq`;
@@ -76,6 +78,7 @@ export abstract class FragmentationStrategyDatasetSummaryDerivedResourceTemplate
         quadSink,
         metaFile,
         { parameterNames: queryTemplateNames },
+        filters,
       );
 
       if (this.directMetadataLinkPredicate) {

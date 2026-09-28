@@ -32,10 +32,11 @@ export class FragmentationStrategyDatasetSummaryDerivedResourceQpf
       const output = summary.serialize();
       const filePathPod = this.getFilePath(output.iri);
       const path = `${filePathPod}${this.filterFilename.replace(':COUNT:', '0')}.txt`;
-      await this.writeDirAndFile(path, this.constructQuery(output.quads, {}).query, 'utf-8');
+      const filter = this.constructQuery(output.quads, {}).query;
+      await this.writeDirAndFile(path, filter, 'utf-8');
 
       const metaFile = `${output.iri}${this.metadataQuadsGenerator.getMetaFileName()}`;
-      await this.writeMetaFile(output.iri, 1, quadSink, metaFile);
+      await this.writeMetaFile(output.iri, 1, quadSink, metaFile, undefined, [ filter ]);
 
       if (this.directMetadataLinkPredicate) {
         await this.writeDirectMetadataLink(output, quadSink, metaFile);
